@@ -1,0 +1,109 @@
+{
+    "objects": [
+        {
+            "category": "obstacle",
+            "id": 0,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 619.0,
+                "y1": 413.0,
+                "x2": 640.0,
+                "y2": 427.0
+            }
+        },
+        {
+            "category": "obstacle",
+            "id": 1,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 53.0,
+                "y1": 338.0,
+                "x2": 64.0,
+                "y2": 344.0
+            }
+        },
+        {
+            "category": "obstacle",
+            "id": 2,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 56.0,
+                "y1": 278.0,
+                "x2": 136.0,
+                "y2": 338.0
+            }
+        },
+        {
+            "category": "obstacle",
+            "id": 3,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 0.0,
+                "y1": 244.0,
+                "x2": 3.0,
+                "y2": 252.0
+            }
+        },
+        {
+            "category": "obstacle",
+            "id": 4,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 162.0,
+                "y1": 197.0,
+                "x2": 185.0,
+                "y2": 230.0
+            }
+        },
+        {
+            "category": "obstacle",
+            "id": 5,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 0.0,
+                "y1": 179.0,
+                "x2": 86.0,
+                "y2": 240.0
+            }
+        },
+        {
+            "category": "obstacle",
+            "id": 6,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 0.0,
+                "y1": 73.0,
+                "x2": 640.0,
+                "y2": 480.0
+            }
+        }
+    ]
+}

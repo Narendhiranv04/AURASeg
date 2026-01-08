@@ -1,0 +1,16 @@
+<launch>
+  <!-- Launch Gazebo with a custom world -->
+  <arg name="world_file" default="$(find my_package)/worlds/road.world"/> 
+  <env name="GAZEBO_MODEL_PATH" value="/home/naren/.gazebo/models/polaris_ranger_ev"/>
+  <env name="GAZEBO_MODEL_PATH" value="/home/naren/.gazebo/models/prius_hybrid"/>
+  <env name="GAZEBO_MODEL_PATH" value="/home/naren/.gazebo/models/bus"/>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_file)"/>
+  </include>
+
+  <!-- Include the modified robot launch file -->
+  <include file="$(find kobuki_gazebo)/launch/includes/robot.launch.xml"/>
+
+
+</launch>
+

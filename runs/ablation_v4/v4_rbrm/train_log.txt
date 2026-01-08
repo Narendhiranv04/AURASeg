@@ -1,0 +1,552 @@
+Training Log - 2025-12-09 12:44:17.975064
+Model: ablation_v4_rbrm
+============================================================
+
+Starting training for 100 epochs...
+============================================================
+
+  -> Saved best model (mIoU: 0.4410)
+
+Epoch 1/100 (94.5s)
+  Train - Loss: 0.8345, mIoU: 0.3603, mDice: 0.5294
+  Val   - Loss: 0.9989, mIoU: 0.4410, mDice: 0.6111
+  LR: 1.00e-06, Best mIoU: 0.4410 (epoch 1)
+  -> Saved best model (mIoU: 0.8082)
+
+Epoch 2/100 (94.9s)
+  Train - Loss: 0.3656, mIoU: 0.6848, mDice: 0.8127
+  Val   - Loss: 0.2850, mIoU: 0.8082, mDice: 0.8938
+  LR: 2.08e-05, Best mIoU: 0.8082 (epoch 2)
+  -> Saved best model (mIoU: 0.8613)
+
+Epoch 3/100 (94.8s)
+  Train - Loss: 0.2122, mIoU: 0.8107, mDice: 0.8953
+  Val   - Loss: 0.2927, mIoU: 0.8613, mDice: 0.9255
+  LR: 4.06e-05, Best mIoU: 0.8613 (epoch 3)
+  -> Saved best model (mIoU: 0.8970)
+
+Epoch 4/100 (94.7s)
+  Train - Loss: 0.1533, mIoU: 0.8618, mDice: 0.9257
+  Val   - Loss: 0.1363, mIoU: 0.8970, mDice: 0.9456
+  LR: 6.04e-05, Best mIoU: 0.8970 (epoch 4)
+  -> Saved best model (mIoU: 0.9243)
+
+Epoch 5/100 (94.5s)
+  Train - Loss: 0.1181, mIoU: 0.8931, mDice: 0.9435
+  Val   - Loss: 0.1032, mIoU: 0.9243, mDice: 0.9606
+  LR: 8.02e-05, Best mIoU: 0.9243 (epoch 5)
+  -> Saved best model (mIoU: 0.9439)
+
+Epoch 6/100 (95.1s)
+  Train - Loss: 0.0914, mIoU: 0.9171, mDice: 0.9568
+  Val   - Loss: 0.0674, mIoU: 0.9439, mDice: 0.9711
+  LR: 1.00e-04, Best mIoU: 0.9439 (epoch 6)
+  -> Saved best model (mIoU: 0.9472)
+
+Epoch 7/100 (94.0s)
+  Train - Loss: 0.0747, mIoU: 0.9331, mDice: 0.9654
+  Val   - Loss: 0.0647, mIoU: 0.9472, mDice: 0.9729
+  LR: 1.00e-04, Best mIoU: 0.9472 (epoch 7)
+  -> Saved best model (mIoU: 0.9480)
+
+Epoch 8/100 (93.9s)
+  Train - Loss: 0.0640, mIoU: 0.9427, mDice: 0.9705
+  Val   - Loss: 0.0595, mIoU: 0.9480, mDice: 0.9733
+  LR: 9.99e-05, Best mIoU: 0.9480 (epoch 8)
+  -> Saved best model (mIoU: 0.9593)
+
+Epoch 9/100 (94.6s)
+  Train - Loss: 0.0587, mIoU: 0.9478, mDice: 0.9732
+  Val   - Loss: 0.0453, mIoU: 0.9593, mDice: 0.9792
+  LR: 9.98e-05, Best mIoU: 0.9593 (epoch 9)
+
+Epoch 10/100 (99.3s)
+  Train - Loss: 0.0498, mIoU: 0.9554, mDice: 0.9772
+  Val   - Loss: 0.0527, mIoU: 0.9540, mDice: 0.9765
+  LR: 9.96e-05, Best mIoU: 0.9593 (epoch 9)
+  -> Saved best model (mIoU: 0.9621)
+
+Epoch 11/100 (95.2s)
+  Train - Loss: 0.0479, mIoU: 0.9574, mDice: 0.9782
+  Val   - Loss: 0.0414, mIoU: 0.9621, mDice: 0.9807
+  LR: 9.93e-05, Best mIoU: 0.9621 (epoch 11)
+  -> Saved best model (mIoU: 0.9688)
+
+Epoch 12/100 (94.6s)
+  Train - Loss: 0.0426, mIoU: 0.9617, mDice: 0.9805
+  Val   - Loss: 0.0355, mIoU: 0.9688, mDice: 0.9842
+  LR: 9.90e-05, Best mIoU: 0.9688 (epoch 12)
+
+Epoch 13/100 (95.8s)
+  Train - Loss: 0.0396, mIoU: 0.9641, mDice: 0.9817
+  Val   - Loss: 0.0380, mIoU: 0.9647, mDice: 0.9820
+  LR: 9.87e-05, Best mIoU: 0.9688 (epoch 12)
+  -> Saved best model (mIoU: 0.9713)
+
+Epoch 14/100 (96.2s)
+  Train - Loss: 0.0363, mIoU: 0.9670, mDice: 0.9832
+  Val   - Loss: 0.0317, mIoU: 0.9713, mDice: 0.9855
+  LR: 9.83e-05, Best mIoU: 0.9713 (epoch 14)
+
+Epoch 15/100 (97.0s)
+  Train - Loss: 0.0348, mIoU: 0.9684, mDice: 0.9839
+  Val   - Loss: 0.0318, mIoU: 0.9702, mDice: 0.9849
+  LR: 9.78e-05, Best mIoU: 0.9713 (epoch 14)
+
+Epoch 16/100 (97.1s)
+  Train - Loss: 0.0330, mIoU: 0.9696, mDice: 0.9846
+  Val   - Loss: 0.0311, mIoU: 0.9703, mDice: 0.9849
+  LR: 9.73e-05, Best mIoU: 0.9713 (epoch 14)
+  -> Saved best model (mIoU: 0.9732)
+
+Epoch 17/100 (97.2s)
+  Train - Loss: 0.0316, mIoU: 0.9712, mDice: 0.9854
+  Val   - Loss: 0.0286, mIoU: 0.9732, mDice: 0.9864
+  LR: 9.68e-05, Best mIoU: 0.9732 (epoch 17)
+  -> Saved best model (mIoU: 0.9737)
+
+Epoch 18/100 (97.5s)
+  Train - Loss: 0.0286, mIoU: 0.9733, mDice: 0.9865
+  Val   - Loss: 0.0294, mIoU: 0.9737, mDice: 0.9867
+  LR: 9.62e-05, Best mIoU: 0.9737 (epoch 18)
+  -> Saved best model (mIoU: 0.9742)
+
+Epoch 19/100 (94.9s)
+  Train - Loss: 0.0302, mIoU: 0.9723, mDice: 0.9860
+  Val   - Loss: 0.0277, mIoU: 0.9742, mDice: 0.9869
+  LR: 9.55e-05, Best mIoU: 0.9742 (epoch 19)
+  -> Saved best model (mIoU: 0.9761)
+
+Epoch 20/100 (98.8s)
+  Train - Loss: 0.0265, mIoU: 0.9752, mDice: 0.9874
+  Val   - Loss: 0.0256, mIoU: 0.9761, mDice: 0.9879
+  LR: 9.48e-05, Best mIoU: 0.9761 (epoch 20)
+  -> Saved best model (mIoU: 0.9767)
+
+Epoch 21/100 (95.6s)
+  Train - Loss: 0.0257, mIoU: 0.9757, mDice: 0.9877
+  Val   - Loss: 0.0258, mIoU: 0.9767, mDice: 0.9882
+  LR: 9.40e-05, Best mIoU: 0.9767 (epoch 21)
+  -> Saved best model (mIoU: 0.9774)
+
+Epoch 22/100 (93.4s)
+  Train - Loss: 0.0255, mIoU: 0.9761, mDice: 0.9879
+  Val   - Loss: 0.0246, mIoU: 0.9774, mDice: 0.9886
+  LR: 9.32e-05, Best mIoU: 0.9774 (epoch 22)
+
+Epoch 23/100 (94.8s)
+  Train - Loss: 0.0235, mIoU: 0.9776, mDice: 0.9886
+  Val   - Loss: 0.0363, mIoU: 0.9718, mDice: 0.9857
+  LR: 9.24e-05, Best mIoU: 0.9774 (epoch 22)
+  -> Saved best model (mIoU: 0.9776)
+
+Epoch 24/100 (94.5s)
+  Train - Loss: 0.0237, mIoU: 0.9774, mDice: 0.9886
+  Val   - Loss: 0.0244, mIoU: 0.9776, mDice: 0.9887
+  LR: 9.15e-05, Best mIoU: 0.9776 (epoch 24)
+  -> Saved best model (mIoU: 0.9783)
+
+Epoch 25/100 (92.3s)
+  Train - Loss: 0.0221, mIoU: 0.9788, mDice: 0.9893
+  Val   - Loss: 0.0234, mIoU: 0.9783, mDice: 0.9890
+  LR: 9.05e-05, Best mIoU: 0.9783 (epoch 25)
+
+Epoch 26/100 (93.6s)
+  Train - Loss: 0.0208, mIoU: 0.9800, mDice: 0.9899
+  Val   - Loss: 0.0269, mIoU: 0.9763, mDice: 0.9880
+  LR: 8.96e-05, Best mIoU: 0.9783 (epoch 25)
+  -> Saved best model (mIoU: 0.9792)
+
+Epoch 27/100 (94.6s)
+  Train - Loss: 0.0218, mIoU: 0.9792, mDice: 0.9895
+  Val   - Loss: 0.0231, mIoU: 0.9792, mDice: 0.9895
+  LR: 8.85e-05, Best mIoU: 0.9792 (epoch 27)
+  -> Saved best model (mIoU: 0.9811)
+
+Epoch 28/100 (93.9s)
+  Train - Loss: 0.0198, mIoU: 0.9810, mDice: 0.9904
+  Val   - Loss: 0.0210, mIoU: 0.9811, mDice: 0.9904
+  LR: 8.75e-05, Best mIoU: 0.9811 (epoch 28)
+
+Epoch 29/100 (94.0s)
+  Train - Loss: 0.0190, mIoU: 0.9816, mDice: 0.9907
+  Val   - Loss: 0.0225, mIoU: 0.9805, mDice: 0.9901
+  LR: 8.64e-05, Best mIoU: 0.9811 (epoch 28)
+
+Epoch 30/100 (98.7s)
+  Train - Loss: 0.0175, mIoU: 0.9830, mDice: 0.9914
+  Val   - Loss: 0.0212, mIoU: 0.9809, mDice: 0.9903
+  LR: 8.52e-05, Best mIoU: 0.9811 (epoch 28)
+
+Epoch 31/100 (93.7s)
+  Train - Loss: 0.0179, mIoU: 0.9828, mDice: 0.9913
+  Val   - Loss: 0.0226, mIoU: 0.9799, mDice: 0.9898
+  LR: 8.40e-05, Best mIoU: 0.9811 (epoch 28)
+
+Epoch 32/100 (93.8s)
+  Train - Loss: 0.0205, mIoU: 0.9806, mDice: 0.9902
+  Val   - Loss: 0.0229, mIoU: 0.9794, mDice: 0.9896
+  LR: 8.28e-05, Best mIoU: 0.9811 (epoch 28)
+  -> Saved best model (mIoU: 0.9814)
+
+Epoch 33/100 (94.4s)
+  Train - Loss: 0.0180, mIoU: 0.9826, mDice: 0.9912
+  Val   - Loss: 0.0208, mIoU: 0.9814, mDice: 0.9906
+  LR: 8.15e-05, Best mIoU: 0.9814 (epoch 33)
+  -> Saved best model (mIoU: 0.9824)
+
+Epoch 34/100 (95.4s)
+  Train - Loss: 0.0180, mIoU: 0.9830, mDice: 0.9914
+  Val   - Loss: 0.0204, mIoU: 0.9824, mDice: 0.9911
+  LR: 8.03e-05, Best mIoU: 0.9824 (epoch 34)
+
+Epoch 35/100 (89.7s)
+  Train - Loss: 0.0158, mIoU: 0.9846, mDice: 0.9922
+  Val   - Loss: 0.0202, mIoU: 0.9818, mDice: 0.9908
+  LR: 7.89e-05, Best mIoU: 0.9824 (epoch 34)
+
+Epoch 36/100 (89.0s)
+  Train - Loss: 0.0160, mIoU: 0.9844, mDice: 0.9921
+  Val   - Loss: 0.0213, mIoU: 0.9813, mDice: 0.9906
+  LR: 7.76e-05, Best mIoU: 0.9824 (epoch 34)
+
+Epoch 37/100 (93.7s)
+  Train - Loss: 0.0153, mIoU: 0.9852, mDice: 0.9926
+  Val   - Loss: 0.0228, mIoU: 0.9795, mDice: 0.9897
+  LR: 7.62e-05, Best mIoU: 0.9824 (epoch 34)
+
+Epoch 38/100 (93.8s)
+  Train - Loss: 0.0168, mIoU: 0.9835, mDice: 0.9917
+  Val   - Loss: 0.0202, mIoU: 0.9813, mDice: 0.9906
+  LR: 7.48e-05, Best mIoU: 0.9824 (epoch 34)
+  -> Saved best model (mIoU: 0.9832)
+
+Epoch 39/100 (94.2s)
+  Train - Loss: 0.0147, mIoU: 0.9857, mDice: 0.9928
+  Val   - Loss: 0.0188, mIoU: 0.9832, mDice: 0.9915
+  LR: 7.33e-05, Best mIoU: 0.9832 (epoch 39)
+
+Epoch 40/100 (97.1s)
+  Train - Loss: 0.0138, mIoU: 0.9865, mDice: 0.9932
+  Val   - Loss: 0.0192, mIoU: 0.9827, mDice: 0.9913
+  LR: 7.19e-05, Best mIoU: 0.9832 (epoch 39)
+  -> Saved best model (mIoU: 0.9837)
+
+Epoch 41/100 (94.6s)
+  Train - Loss: 0.0134, mIoU: 0.9869, mDice: 0.9934
+  Val   - Loss: 0.0184, mIoU: 0.9837, mDice: 0.9918
+  LR: 7.04e-05, Best mIoU: 0.9837 (epoch 41)
+
+Epoch 42/100 (95.0s)
+  Train - Loss: 0.0134, mIoU: 0.9870, mDice: 0.9935
+  Val   - Loss: 0.0198, mIoU: 0.9824, mDice: 0.9911
+  LR: 6.89e-05, Best mIoU: 0.9837 (epoch 41)
+
+Epoch 43/100 (93.9s)
+  Train - Loss: 0.0134, mIoU: 0.9870, mDice: 0.9935
+  Val   - Loss: 0.0201, mIoU: 0.9834, mDice: 0.9916
+  LR: 6.73e-05, Best mIoU: 0.9837 (epoch 41)
+  -> Saved best model (mIoU: 0.9839)
+
+Epoch 44/100 (93.9s)
+  Train - Loss: 0.0129, mIoU: 0.9873, mDice: 0.9936
+  Val   - Loss: 0.0184, mIoU: 0.9839, mDice: 0.9919
+  LR: 6.58e-05, Best mIoU: 0.9839 (epoch 44)
+
+Epoch 45/100 (94.3s)
+  Train - Loss: 0.0131, mIoU: 0.9873, mDice: 0.9936
+  Val   - Loss: 0.0207, mIoU: 0.9823, mDice: 0.9911
+  LR: 6.42e-05, Best mIoU: 0.9839 (epoch 44)
+  -> Saved best model (mIoU: 0.9841)
+
+Epoch 46/100 (94.9s)
+  Train - Loss: 0.0131, mIoU: 0.9870, mDice: 0.9935
+  Val   - Loss: 0.0179, mIoU: 0.9841, mDice: 0.9920
+  LR: 6.27e-05, Best mIoU: 0.9841 (epoch 46)
+
+Epoch 47/100 (93.7s)
+  Train - Loss: 0.0118, mIoU: 0.9883, mDice: 0.9941
+  Val   - Loss: 0.0180, mIoU: 0.9837, mDice: 0.9918
+  LR: 6.11e-05, Best mIoU: 0.9841 (epoch 46)
+  -> Saved best model (mIoU: 0.9847)
+
+Epoch 48/100 (94.5s)
+  Train - Loss: 0.0119, mIoU: 0.9882, mDice: 0.9940
+  Val   - Loss: 0.0177, mIoU: 0.9847, mDice: 0.9923
+  LR: 5.95e-05, Best mIoU: 0.9847 (epoch 48)
+
+Epoch 49/100 (93.6s)
+  Train - Loss: 0.0119, mIoU: 0.9882, mDice: 0.9941
+  Val   - Loss: 0.0178, mIoU: 0.9843, mDice: 0.9921
+  LR: 5.78e-05, Best mIoU: 0.9847 (epoch 48)
+  -> Saved best model (mIoU: 0.9851)
+
+Epoch 50/100 (98.6s)
+  Train - Loss: 0.0113, mIoU: 0.9889, mDice: 0.9944
+  Val   - Loss: 0.0172, mIoU: 0.9851, mDice: 0.9925
+  LR: 5.62e-05, Best mIoU: 0.9851 (epoch 50)
+
+Epoch 51/100 (93.2s)
+  Train - Loss: 0.0111, mIoU: 0.9892, mDice: 0.9946
+  Val   - Loss: 0.0189, mIoU: 0.9841, mDice: 0.9920
+  LR: 5.46e-05, Best mIoU: 0.9851 (epoch 50)
+
+Epoch 52/100 (93.8s)
+  Train - Loss: 0.0112, mIoU: 0.9890, mDice: 0.9945
+  Val   - Loss: 0.0190, mIoU: 0.9842, mDice: 0.9920
+  LR: 5.30e-05, Best mIoU: 0.9851 (epoch 50)
+
+Epoch 53/100 (93.5s)
+  Train - Loss: 0.0107, mIoU: 0.9895, mDice: 0.9947
+  Val   - Loss: 0.0180, mIoU: 0.9846, mDice: 0.9923
+  LR: 5.13e-05, Best mIoU: 0.9851 (epoch 50)
+
+Epoch 54/100 (93.2s)
+  Train - Loss: 0.0109, mIoU: 0.9893, mDice: 0.9946
+  Val   - Loss: 0.0173, mIoU: 0.9848, mDice: 0.9923
+  LR: 4.97e-05, Best mIoU: 0.9851 (epoch 50)
+
+Epoch 55/100 (94.1s)
+  Train - Loss: 0.0106, mIoU: 0.9896, mDice: 0.9948
+  Val   - Loss: 0.0186, mIoU: 0.9845, mDice: 0.9922
+  LR: 4.80e-05, Best mIoU: 0.9851 (epoch 50)
+
+Epoch 56/100 (93.9s)
+  Train - Loss: 0.0101, mIoU: 0.9900, mDice: 0.9950
+  Val   - Loss: 0.0188, mIoU: 0.9844, mDice: 0.9922
+  LR: 4.64e-05, Best mIoU: 0.9851 (epoch 50)
+
+Epoch 57/100 (93.6s)
+  Train - Loss: 0.0100, mIoU: 0.9901, mDice: 0.9950
+  Val   - Loss: 0.0174, mIoU: 0.9849, mDice: 0.9924
+  LR: 4.48e-05, Best mIoU: 0.9851 (epoch 50)
+  -> Saved best model (mIoU: 0.9854)
+
+Epoch 58/100 (93.5s)
+  Train - Loss: 0.0098, mIoU: 0.9904, mDice: 0.9952
+  Val   - Loss: 0.0173, mIoU: 0.9854, mDice: 0.9926
+  LR: 4.32e-05, Best mIoU: 0.9854 (epoch 58)
+
+Epoch 59/100 (93.5s)
+  Train - Loss: 0.0099, mIoU: 0.9902, mDice: 0.9951
+  Val   - Loss: 0.0176, mIoU: 0.9851, mDice: 0.9925
+  LR: 4.15e-05, Best mIoU: 0.9854 (epoch 58)
+
+Epoch 60/100 (98.1s)
+  Train - Loss: 0.0098, mIoU: 0.9903, mDice: 0.9951
+  Val   - Loss: 0.0191, mIoU: 0.9844, mDice: 0.9922
+  LR: 3.99e-05, Best mIoU: 0.9854 (epoch 58)
+
+Epoch 61/100 (93.4s)
+  Train - Loss: 0.0096, mIoU: 0.9904, mDice: 0.9952
+  Val   - Loss: 0.0182, mIoU: 0.9852, mDice: 0.9925
+  LR: 3.83e-05, Best mIoU: 0.9854 (epoch 58)
+  -> Saved best model (mIoU: 0.9858)
+
+Epoch 62/100 (95.8s)
+  Train - Loss: 0.0091, mIoU: 0.9910, mDice: 0.9955
+  Val   - Loss: 0.0176, mIoU: 0.9858, mDice: 0.9928
+  LR: 3.68e-05, Best mIoU: 0.9858 (epoch 62)
+
+Epoch 63/100 (96.8s)
+  Train - Loss: 0.0089, mIoU: 0.9912, mDice: 0.9956
+  Val   - Loss: 0.0185, mIoU: 0.9850, mDice: 0.9925
+  LR: 3.52e-05, Best mIoU: 0.9858 (epoch 62)
+
+Epoch 64/100 (95.0s)
+  Train - Loss: 0.0088, mIoU: 0.9913, mDice: 0.9956
+  Val   - Loss: 0.0178, mIoU: 0.9857, mDice: 0.9928
+  LR: 3.37e-05, Best mIoU: 0.9858 (epoch 62)
+
+Epoch 65/100 (95.2s)
+  Train - Loss: 0.0088, mIoU: 0.9914, mDice: 0.9957
+  Val   - Loss: 0.0173, mIoU: 0.9856, mDice: 0.9928
+  LR: 3.21e-05, Best mIoU: 0.9858 (epoch 62)
+
+Epoch 66/100 (94.4s)
+  Train - Loss: 0.0090, mIoU: 0.9912, mDice: 0.9956
+  Val   - Loss: 0.0179, mIoU: 0.9855, mDice: 0.9927
+  LR: 3.06e-05, Best mIoU: 0.9858 (epoch 62)
+
+Epoch 67/100 (93.0s)
+  Train - Loss: 0.0087, mIoU: 0.9914, mDice: 0.9957
+  Val   - Loss: 0.0181, mIoU: 0.9854, mDice: 0.9927
+  LR: 2.91e-05, Best mIoU: 0.9858 (epoch 62)
+  -> Saved best model (mIoU: 0.9861)
+
+Epoch 68/100 (94.4s)
+  Train - Loss: 0.0085, mIoU: 0.9916, mDice: 0.9958
+  Val   - Loss: 0.0174, mIoU: 0.9861, mDice: 0.9930
+  LR: 2.77e-05, Best mIoU: 0.9861 (epoch 68)
+  -> Saved best model (mIoU: 0.9861)
+
+Epoch 69/100 (95.5s)
+  Train - Loss: 0.0084, mIoU: 0.9917, mDice: 0.9958
+  Val   - Loss: 0.0176, mIoU: 0.9861, mDice: 0.9930
+  LR: 2.62e-05, Best mIoU: 0.9861 (epoch 69)
+
+Epoch 70/100 (98.6s)
+  Train - Loss: 0.0083, mIoU: 0.9918, mDice: 0.9959
+  Val   - Loss: 0.0177, mIoU: 0.9860, mDice: 0.9929
+  LR: 2.48e-05, Best mIoU: 0.9861 (epoch 69)
+
+Epoch 71/100 (94.3s)
+  Train - Loss: 0.0082, mIoU: 0.9919, mDice: 0.9959
+  Val   - Loss: 0.0176, mIoU: 0.9858, mDice: 0.9929
+  LR: 2.34e-05, Best mIoU: 0.9861 (epoch 69)
+  -> Saved best model (mIoU: 0.9863)
+
+Epoch 72/100 (94.5s)
+  Train - Loss: 0.0081, mIoU: 0.9920, mDice: 0.9960
+  Val   - Loss: 0.0166, mIoU: 0.9863, mDice: 0.9931
+  LR: 2.21e-05, Best mIoU: 0.9863 (epoch 72)
+
+Epoch 73/100 (95.1s)
+  Train - Loss: 0.0081, mIoU: 0.9920, mDice: 0.9960
+  Val   - Loss: 0.0175, mIoU: 0.9862, mDice: 0.9930
+  LR: 2.07e-05, Best mIoU: 0.9863 (epoch 72)
+
+Epoch 74/100 (95.2s)
+  Train - Loss: 0.0080, mIoU: 0.9921, mDice: 0.9960
+  Val   - Loss: 0.0178, mIoU: 0.9858, mDice: 0.9929
+  LR: 1.95e-05, Best mIoU: 0.9863 (epoch 72)
+
+Epoch 75/100 (94.4s)
+  Train - Loss: 0.0079, mIoU: 0.9922, mDice: 0.9961
+  Val   - Loss: 0.0175, mIoU: 0.9861, mDice: 0.9930
+  LR: 1.82e-05, Best mIoU: 0.9863 (epoch 72)
+
+Epoch 76/100 (93.1s)
+  Train - Loss: 0.0078, mIoU: 0.9924, mDice: 0.9962
+  Val   - Loss: 0.0175, mIoU: 0.9861, mDice: 0.9930
+  LR: 1.70e-05, Best mIoU: 0.9863 (epoch 72)
+  -> Saved best model (mIoU: 0.9863)
+
+Epoch 77/100 (93.7s)
+  Train - Loss: 0.0077, mIoU: 0.9923, mDice: 0.9962
+  Val   - Loss: 0.0173, mIoU: 0.9863, mDice: 0.9931
+  LR: 1.58e-05, Best mIoU: 0.9863 (epoch 77)
+
+Epoch 78/100 (91.7s)
+  Train - Loss: 0.0077, mIoU: 0.9924, mDice: 0.9962
+  Val   - Loss: 0.0175, mIoU: 0.9862, mDice: 0.9931
+  LR: 1.46e-05, Best mIoU: 0.9863 (epoch 77)
+  -> Saved best model (mIoU: 0.9864)
+
+Epoch 79/100 (94.7s)
+  Train - Loss: 0.0076, mIoU: 0.9925, mDice: 0.9962
+  Val   - Loss: 0.0173, mIoU: 0.9864, mDice: 0.9931
+  LR: 1.35e-05, Best mIoU: 0.9864 (epoch 79)
+
+Epoch 80/100 (101.6s)
+  Train - Loss: 0.0075, mIoU: 0.9926, mDice: 0.9963
+  Val   - Loss: 0.0174, mIoU: 0.9863, mDice: 0.9931
+  LR: 1.25e-05, Best mIoU: 0.9864 (epoch 79)
+
+Epoch 81/100 (97.6s)
+  Train - Loss: 0.0075, mIoU: 0.9926, mDice: 0.9963
+  Val   - Loss: 0.0171, mIoU: 0.9863, mDice: 0.9931
+  LR: 1.14e-05, Best mIoU: 0.9864 (epoch 79)
+  -> Saved best model (mIoU: 0.9865)
+
+Epoch 82/100 (96.0s)
+  Train - Loss: 0.0075, mIoU: 0.9926, mDice: 0.9963
+  Val   - Loss: 0.0171, mIoU: 0.9865, mDice: 0.9932
+  LR: 1.05e-05, Best mIoU: 0.9865 (epoch 82)
+
+Epoch 83/100 (96.0s)
+  Train - Loss: 0.0074, mIoU: 0.9927, mDice: 0.9963
+  Val   - Loss: 0.0175, mIoU: 0.9864, mDice: 0.9932
+  LR: 9.51e-06, Best mIoU: 0.9865 (epoch 82)
+
+Epoch 84/100 (92.6s)
+  Train - Loss: 0.0074, mIoU: 0.9927, mDice: 0.9963
+  Val   - Loss: 0.0173, mIoU: 0.9864, mDice: 0.9932
+  LR: 8.62e-06, Best mIoU: 0.9865 (epoch 82)
+
+Epoch 85/100 (95.8s)
+  Train - Loss: 0.0073, mIoU: 0.9927, mDice: 0.9964
+  Val   - Loss: 0.0172, mIoU: 0.9864, mDice: 0.9932
+  LR: 7.77e-06, Best mIoU: 0.9865 (epoch 82)
+
+Epoch 86/100 (94.9s)
+  Train - Loss: 0.0073, mIoU: 0.9928, mDice: 0.9964
+  Val   - Loss: 0.0171, mIoU: 0.9865, mDice: 0.9932
+  LR: 6.97e-06, Best mIoU: 0.9865 (epoch 82)
+  -> Saved best model (mIoU: 0.9865)
+
+Epoch 87/100 (96.3s)
+  Train - Loss: 0.0073, mIoU: 0.9928, mDice: 0.9964
+  Val   - Loss: 0.0170, mIoU: 0.9865, mDice: 0.9932
+  LR: 6.21e-06, Best mIoU: 0.9865 (epoch 87)
+
+Epoch 88/100 (95.4s)
+  Train - Loss: 0.0072, mIoU: 0.9929, mDice: 0.9964
+  Val   - Loss: 0.0172, mIoU: 0.9865, mDice: 0.9932
+  LR: 5.50e-06, Best mIoU: 0.9865 (epoch 87)
+  -> Saved best model (mIoU: 0.9866)
+
+Epoch 89/100 (93.9s)
+  Train - Loss: 0.0072, mIoU: 0.9929, mDice: 0.9964
+  Val   - Loss: 0.0171, mIoU: 0.9866, mDice: 0.9933
+  LR: 4.85e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 90/100 (98.5s)
+  Train - Loss: 0.0072, mIoU: 0.9929, mDice: 0.9964
+  Val   - Loss: 0.0171, mIoU: 0.9865, mDice: 0.9932
+  LR: 4.24e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 91/100 (93.8s)
+  Train - Loss: 0.0071, mIoU: 0.9929, mDice: 0.9964
+  Val   - Loss: 0.0170, mIoU: 0.9866, mDice: 0.9932
+  LR: 3.68e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 92/100 (94.0s)
+  Train - Loss: 0.0071, mIoU: 0.9929, mDice: 0.9965
+  Val   - Loss: 0.0170, mIoU: 0.9866, mDice: 0.9932
+  LR: 3.18e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 93/100 (93.8s)
+  Train - Loss: 0.0072, mIoU: 0.9929, mDice: 0.9964
+  Val   - Loss: 0.0171, mIoU: 0.9866, mDice: 0.9932
+  LR: 2.72e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 94/100 (93.6s)
+  Train - Loss: 0.0071, mIoU: 0.9930, mDice: 0.9965
+  Val   - Loss: 0.0171, mIoU: 0.9865, mDice: 0.9932
+  LR: 2.32e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 95/100 (93.8s)
+  Train - Loss: 0.0071, mIoU: 0.9930, mDice: 0.9965
+  Val   - Loss: 0.0171, mIoU: 0.9865, mDice: 0.9932
+  LR: 1.97e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 96/100 (94.3s)
+  Train - Loss: 0.0071, mIoU: 0.9930, mDice: 0.9965
+  Val   - Loss: 0.0169, mIoU: 0.9865, mDice: 0.9932
+  LR: 1.68e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 97/100 (94.8s)
+  Train - Loss: 0.0071, mIoU: 0.9930, mDice: 0.9965
+  Val   - Loss: 0.0172, mIoU: 0.9866, mDice: 0.9932
+  LR: 1.43e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 98/100 (95.2s)
+  Train - Loss: 0.0071, mIoU: 0.9930, mDice: 0.9965
+  Val   - Loss: 0.0170, mIoU: 0.9866, mDice: 0.9932
+  LR: 1.24e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 99/100 (95.0s)
+  Train - Loss: 0.0071, mIoU: 0.9930, mDice: 0.9965
+  Val   - Loss: 0.0170, mIoU: 0.9866, mDice: 0.9933
+  LR: 1.11e-06, Best mIoU: 0.9866 (epoch 89)
+
+Epoch 100/100 (99.4s)
+  Train - Loss: 0.0071, mIoU: 0.9930, mDice: 0.9965
+  Val   - Loss: 0.0170, mIoU: 0.9866, mDice: 0.9932
+  LR: 1.03e-06, Best mIoU: 0.9866 (epoch 89)
+
+============================================================
+Training completed in 2.64 hours
+Best mIoU: 0.9866 at epoch 89
+============================================================

@@ -1,0 +1,9 @@
+COMPARISON RESULTS
+Metric               | V1 (SPP)        | V2 (ASPP-Lite) 
+--------------------------------------------------------
+miou                 | 0.9847          | 0.9848
+dice_drivable        | 0.9908          | 0.9911
+accuracy             | 0.9928          | 0.9928
+precision_drivable   | 0.9910          | 0.9918
+recall_drivable      | 0.9913          | 0.9907
+f1_drivable          | 0.9908          | 0.9911

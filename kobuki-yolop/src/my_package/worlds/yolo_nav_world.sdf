@@ -1,0 +1,74 @@
+<sdf version='1.4'>
+  <world name='default'>
+    <light name='sun' type='directional'>
+      <cast_shadows>1</cast_shadows>
+      <pose>0 0 10 0 -0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <name>city_base</name>
+      <uri>model://city_base</uri>
+      <static>true</static>
+      <pose>0 0 1 0 0 0</pose>
+    </include>
+    <include>
+      <name>hatchback</name>
+      <uri>model://hatchback</uri>
+      <static>true</static>
+      <pose>22 19 1.1 0 0 0</pose>
+    </include>
+    <include>
+      <name>person_standing</name>
+      <uri>model://person_standing</uri>
+      <static>true</static>
+      <pose>-31 34 1.08 0 0 -0.8</pose>
+    </include>
+    <include>
+      <name>hatchback2</name>
+      <uri>model://hatchback</uri>
+      <static>true</static>
+      <pose>-0.5 24 1.1 0 0 3.12</pose>
+    </include>
+    <include>
+      <name>hatchback_blue</name>
+      <uri>model://hatchback_blue</uri>
+      <static>true</static>
+      <pose>-37 -5.5 1.1 0 0 1.57</pose>
+    </include>
+    <include>
+      <name>hatchback_red_0</name>
+      <uri>model://hatchback_red</uri>
+      <static>true</static>
+      <pose>-24 18.5 1.0 0 0 3.12</pose>
+    </include>             
+    <include>
+      <name>bus_0</name>
+      <uri>model://bus</uri>
+      <static>true</static>
+      <pose>-45.5 6.7 1 0 0 0 0</pose>
+    </include>  
+    <include>
+      <name>person_walking_0</name>
+      <uri>model://person_walking</uri>
+      <static>true</static>
+      <pose>20 14 1.0 0 0 1.53</pose>
+    </include>
+    <include>
+      <name>person_walking_1</name>
+      <uri>model://person_walking</uri>
+      <static>true</static>
+      <pose>-7 14 1.0 0 0 1.47</pose>
+    </include>
+  </world>
+</sdf>

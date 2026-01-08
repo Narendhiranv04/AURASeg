@@ -1,0 +1,155 @@
+FINAL COMPARISON: AURASeg V4-R50 vs Benchmark Models
+================================================================================
+
+Model: DeepLabV3+
+Encoder: ResNet-50
+Parameters: 26.68M
+----------------------------------------
+SEGMENTATION METRICS:
+    miou: 0.9887
+    iou_drivable: 0.9875
+    iou_background: 0.9899
+    dice: 0.9937
+    precision: 0.9938
+    recall: 0.9936
+    f1: 0.9937
+    accuracy: 0.9944
+BOUNDARY METRICS:
+    boundary_iou: 0.7799
+    boundary_precision: 0.8990
+    boundary_recall: 0.8477
+    boundary_f1: 0.8700
+
+Model: SegFormer-B2
+Encoder: MiT-B2
+Parameters: 24.72M
+----------------------------------------
+SEGMENTATION METRICS:
+    miou: 0.9896
+    iou_drivable: 0.9885
+    iou_background: 0.9907
+    dice: 0.9942
+    precision: 0.9958
+    recall: 0.9927
+    f1: 0.9942
+    accuracy: 0.9948
+BOUNDARY METRICS:
+    boundary_iou: 0.7763
+    boundary_precision: 0.8988
+    boundary_recall: 0.8445
+    boundary_f1: 0.8683
+
+Model: FPN-MiTB3
+Encoder: MiT-B3
+Parameters: 45.96M
+----------------------------------------
+SEGMENTATION METRICS:
+    miou: 0.9892
+    iou_drivable: 0.9881
+    iou_background: 0.9904
+    dice: 0.9940
+    precision: 0.9955
+    recall: 0.9925
+    f1: 0.9940
+    accuracy: 0.9946
+BOUNDARY METRICS:
+    boundary_iou: 0.7740
+    boundary_precision: 0.8972
+    boundary_recall: 0.8422
+    boundary_f1: 0.8661
+
+Model: FCN-ResNet50
+Encoder: ResNet-50
+Parameters: 35.31M
+----------------------------------------
+SEGMENTATION METRICS:
+    miou: 0.9870
+    iou_drivable: 0.9857
+    iou_background: 0.9884
+    dice: 0.9928
+    precision: 0.9919
+    recall: 0.9936
+    f1: 0.9928
+    accuracy: 0.9935
+BOUNDARY METRICS:
+    boundary_iou: 0.6502
+    boundary_precision: 0.9019
+    boundary_recall: 0.6954
+    boundary_f1: 0.7789
+
+Model: UPerNet-R50
+Encoder: ResNet-50
+Parameters: 37.28M
+----------------------------------------
+SEGMENTATION METRICS:
+    miou: 0.9891
+    iou_drivable: 0.9879
+    iou_background: 0.9902
+    dice: 0.9939
+    precision: 0.9948
+    recall: 0.9931
+    f1: 0.9939
+    accuracy: 0.9946
+BOUNDARY METRICS:
+    boundary_iou: 0.7863
+    boundary_precision: 0.9054
+    boundary_recall: 0.8491
+    boundary_f1: 0.8738
+
+Model: PSPNet-R50
+Encoder: ResNet-50
+Parameters: 24.31M
+----------------------------------------
+SEGMENTATION METRICS:
+    miou: 0.9883
+    iou_drivable: 0.9870
+    iou_background: 0.9895
+    dice: 0.9935
+    precision: 0.9941
+    recall: 0.9929
+    f1: 0.9935
+    accuracy: 0.9942
+BOUNDARY METRICS:
+    boundary_iou: 0.7639
+    boundary_precision: 0.8942
+    boundary_recall: 0.8314
+    boundary_f1: 0.8589
+
+Model: PIDNet-L
+Encoder: Custom
+Parameters: 36.94M
+----------------------------------------
+SEGMENTATION METRICS:
+    miou: 0.9851
+    iou_drivable: 0.9835
+    iou_background: 0.9866
+    dice: 0.9917
+    precision: 0.9912
+    recall: 0.9922
+    f1: 0.9917
+    accuracy: 0.9926
+BOUNDARY METRICS:
+    boundary_iou: 0.6334
+    boundary_precision: 0.8866
+    boundary_recall: 0.6835
+    boundary_f1: 0.7656
+
+Model: AURASeg V4-R50
+Encoder: ResNet-50
+Parameters: 43.05M
+----------------------------------------
+SEGMENTATION METRICS:
+    miou: 0.9907
+    iou_drivable: 0.9897
+    iou_background: 0.9917
+    dice: 0.9948
+    precision: 0.9959
+    recall: 0.9937
+    f1: 0.9948
+    accuracy: 0.9954
+BOUNDARY METRICS:
+    boundary_iou: 0.8124
+    boundary_precision: 0.9271
+    boundary_recall: 0.8613
+    boundary_f1: 0.8905
+

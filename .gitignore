@@ -1,0 +1,71 @@
+# ==============================================================================
+# AURASeg .gitignore
+# ==============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ==============================================================================
+# DATASETS - Exclude (too large)
+# ==============================================================================
+carl-dataset/
+CommonDataset/
+CommonDataset.zip
+GAZEBO/
+
+# External repos (have their own git)
+GMRPD/
+
+# ==============================================================================
+# CHECKPOINTS - Exclude (too large for GitHub, >100MB each)
+# Will be uploaded to Google Drive separately
+# ==============================================================================
+*.pth
+
+# ==============================================================================
+# KEEP - Results, Plots, CSVs, Code
+# ==============================================================================
+# We WANT to include:
+# - runs/**/*.csv (evaluation results)
+# - runs/**/*.png (training plots)
+# - runs/**/*.txt (comparison results)
+# - runs_carl/ (CARL dataset results - CSVs, plots)
+# - benchmark_models/ (all code)
+# - kobuki-yolop/ (model implementations)
+
+# Temporary/debug files to exclude
+debug_cuda.py
+test_fcn.py
+param_report.txt
+paper.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# The reorganized folder (we're using actual structure)
+github_repo/
+
+# Visualization outputs (can regenerate)
+visualization-val/

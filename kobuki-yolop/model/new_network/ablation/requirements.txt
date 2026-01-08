@@ -1,0 +1,22 @@
+# Ablation Study Requirements
+# ===========================
+
+# Core dependencies
+torch>=1.9.0
+torchvision>=0.10.0
+numpy>=1.19.0
+Pillow>=8.0.0
+tqdm>=4.60.0
+
+# Visualization
+matplotlib>=3.3.0
+tensorboard>=2.5.0
+
+# Optional: Weights & Biases logging
+# wandb>=0.12.0
+
+# Optional: FLOPs computation
+# thop>=0.0.31
+
+# Optional: Boundary metrics (scipy needed)
+scipy>=1.6.0

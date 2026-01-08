@@ -1,0 +1,9 @@
+<launch>
+  <!-- Include the Gazebo launch file -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find my_gazebo_launch)/worlds/road.world"/>
+  </include>
+
+  <!-- Spawn the Kobuki robot -->
+  <node name="spawn_kobuki" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model kobuki" />
+</launch>

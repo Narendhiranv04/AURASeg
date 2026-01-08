@@ -1,0 +1,85 @@
+{
+  "data": {
+    "dataset_dir": "C:/Users/naren/Documents/AURASeg/CommonDataset",
+    "train_image_dir": null,
+    "train_mask_dir": null,
+    "val_image_dir": null,
+    "val_mask_dir": null,
+    "input_height": 640,
+    "input_width": 384,
+    "num_classes": 2,
+    "use_augmentation": true,
+    "horizontal_flip_prob": 0.5,
+    "vertical_flip_prob": 0.0,
+    "random_crop": false,
+    "color_jitter": true,
+    "num_workers": 4,
+    "pin_memory": true
+  },
+  "loss": {
+    "lambda_focal": 1.0,
+    "lambda_dice": 1.0,
+    "focal_alpha": 0.25,
+    "focal_gamma": 2.0,
+    "supervision_weights": [
+      0.1,
+      0.2,
+      0.3,
+      0.4
+    ],
+    "use_deep_supervision": false,
+    "ignore_index": 255
+  },
+  "optimizer": {
+    "optimizer": "adamw",
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "momentum": 0.9,
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "scheduler": "cosine",
+    "warmup_epochs": 5,
+    "warmup_lr": 1e-06,
+    "min_lr": 1e-06,
+    "step_size": 30,
+    "gamma": 0.1,
+    "poly_power": 0.9
+  },
+  "training": {
+    "epochs": 100,
+    "batch_size": 4,
+    "accumulation_steps": 1,
+    "use_amp": true,
+    "save_every": 5,
+    "save_best": true,
+    "early_stopping": true,
+    "patience": 20,
+    "min_delta": 0.0001,
+    "val_every": 1,
+    "val_split": 0.1,
+    "seed": 42,
+    "resume": null
+  },
+  "model": {
+    "model_name": "ablation_v3_apud",
+    "num_classes": 2,
+    "in_channels": 3,
+    "pretrained": false,
+    "pretrained_path": null,
+    "freeze_encoder": false,
+    "freeze_decoder": false
+  },
+  "logging": {
+    "output_dir": "./runs/ablation",
+    "experiment_name": "v3_apud",
+    "log_every": 10,
+    "use_tensorboard": true,
+    "use_wandb": false,
+    "wandb_project": "auraseg-ablation",
+    "save_predictions": true,
+    "save_predictions_every": 10,
+    "num_visualization_samples": 4
+  }
+}

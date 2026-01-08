@@ -1,0 +1,49 @@
+{
+    "objects": [
+        {
+            "category": "obstacle",
+            "id": 0,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 140.0,
+                "y1": 338.0,
+                "x2": 640.0,
+                "y2": 480.0
+            }
+        },
+        {
+            "category": "obstacle",
+            "id": 1,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 25.0,
+                "y1": 336.0,
+                "x2": 230.0,
+                "y2": 480.0
+            }
+        },
+        {
+            "category": "obstacle",
+            "id": 2,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 203.0,
+                "y1": 0.0,
+                "x2": 254.0,
+                "y2": 71.0
+            }
+        }
+    ]
+}

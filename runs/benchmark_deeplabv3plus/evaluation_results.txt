@@ -1,0 +1,18 @@
+DeepLabV3+ Evaluation Results
+============================================================
+
+SEGMENTATION METRICS:
+    miou:               0.9887
+    iou_drivable:       0.9875
+    iou_background:     0.9899
+    dice:               0.9937
+    precision:          0.9938
+    recall:             0.9936
+    f1:                 0.9937
+    accuracy:           0.9944
+
+BOUNDARY METRICS:
+    boundary_iou:       0.7799
+    boundary_precision: 0.8990
+    boundary_recall:    0.8477
+    boundary_f1:        0.8700

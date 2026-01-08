@@ -1,0 +1,47 @@
+{
+    "name": "6",
+    "frames": [
+        {
+            "timestamp": 10000,
+            "objects": [
+                {
+                    "category": "area/drivable",
+                    "id": 7,
+                    "attributes": {},
+                    "poly2d": [
+                        [
+                            0.0,
+                            338.0,
+                            "L"
+                        ],
+                        [
+                            0.0,
+                            479.0,
+                            "L"
+                        ],
+                        [
+                            639.0,
+                            479.0,
+                            "L"
+                        ],
+                        [
+                            639.0,
+                            338.0,
+                            "L"
+                        ],
+                        [
+                            0.0,
+                            338.0,
+                            "L"
+                        ]
+                    ]
+                }
+            ]
+        }
+    ],
+    "attributes": {
+        "weather": "clear",
+        "scene": "city street",
+        "timeofday": "night"
+    }
+}

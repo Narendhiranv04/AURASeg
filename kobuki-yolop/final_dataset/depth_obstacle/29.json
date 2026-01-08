@@ -1,0 +1,19 @@
+{
+    "objects": [
+        {
+            "category": "obstacle",
+            "id": 0,
+            "attributes": {
+                "occluded": false,
+                "truncated": false,
+                "trafficLightColor": "none"
+            },
+            "box2d": {
+                "x1": 512.0,
+                "y1": 172.0,
+                "x2": 640.0,
+                "y2": 480.0
+            }
+        }
+    ]
+}

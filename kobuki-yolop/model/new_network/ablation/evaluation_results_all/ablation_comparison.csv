@@ -1,0 +1,5 @@
+Model Version,Parameters (M),FPS,GFLOPs,mIoU,Precision,Recall,F1 Score
+Base Model (V1),24.18 M,61.02,51.31,0.9842,0.9947,0.9894,0.9916
+Base + ASPP-Lite (V2),25.49 M,58.69,51.70,0.9851,0.9943,0.9905,0.9921
+Base + ASPP-Lite + APUD (V3),29.57 M,75.62,50.58,0.9858,0.9946,0.9909,0.9925
+Deep Guided Filter (V4),29.43 M,76.13,47.90,0.9739,0.9904,0.9821,0.9861

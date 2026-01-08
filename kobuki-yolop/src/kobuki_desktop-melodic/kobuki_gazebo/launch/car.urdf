@@ -1,0 +1,313 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+    <model name="simplecar">
+        <!-- Colors -->
+        <material name="black">
+            <color rgba="0 0 0 1"/>
+        </material>
+        <material name="blue">
+            <color rgba="0.6 0.7 0.8 1"/>
+        </material>
+
+        <!-- Base Frame of Car -->
+        <link name="base_link">
+            <visual name="base_link_visual">
+                <geometry>
+                    <box>
+                        <size>0.5 0.3 0.1</size>
+                    </box>
+                </geometry>
+                <material>
+                    <ambient>0.6 0.7 0.8 1</ambient>
+                    <diffuse>0.6 0.7 0.8 1</diffuse>
+                </material>
+            </visual>
+            <inertial>
+                <mass>6</mass>
+                <inertia>
+                    <ixx>0.2</ixx>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyy>0.2</iyy>
+                    <iyz>0.0</iyz>
+                    <izz>0.2</izz>
+                </inertia>
+            </inertial>
+        </link>
+
+        <!-- Left Front Wheel -->
+        <link name="left_front_wheel">
+            <visual name="left_front_wheel_visual">
+                <geometry>
+                    <cylinder>
+                        <radius>0.1</radius>
+                        <length>0.05</length>
+                    </cylinder>
+                </geometry>
+                <pose>0 0 0 1.57075 1.57075 0</pose>
+                <material>
+                    <ambient>0 0 0 1</ambient>
+                    <diffuse>0 0 0 1</diffuse>
+                </material>
+            </visual>
+            <collision name="left_front_wheel_collision">
+                <geometry>
+                    <cylinder>
+                        <radius>0.1</radius>
+                        <length>0.05</length>
+                    </cylinder>
+                </geometry>
+                <pose>0 0 0 1.57075 1.57075 0</pose>
+            </collision>
+            <inertial>
+                <mass>0.3</mass>
+                <inertia>
+                    <ixx>0.4</ixx>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyy>0.4</iyy>
+                    <iyz>0.0</iyz>
+                    <izz>0.2</izz>
+                </inertia>
+                <pose>0 0 0 1.57075 1.57075 0</pose>
+            </inertial>
+        </link>
+
+        <joint name="left_hinge_to_left_front_wheel" type="continuous">
+            <parent>left_hinge</parent>
+            <child>left_front_wheel</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+            </axis>
+            <pose>0 0.2 0 0 0 0</pose>
+        </joint>
+
+        <!-- Left Front Wheel - Hinge -->
+        <link name="left_hinge">
+            <visual name="left_hinge_visual">
+                <geometry>
+                    <box>
+                        <size>0.20 0.02 0.02</size>
+                    </box>
+                </geometry>
+                <pose>0 0.1 0 0 0 1.57075</pose>
+                <material>
+                    <ambient>0 0 0 1</ambient>
+                    <diffuse>0 0 0 1</diffuse>
+                </material>
+            </visual>
+            <inertial>
+                <mass>0.01</mass>
+                <inertia>
+                    <ixx>0.000005</ixx>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyy>0.000005</iyy>
+                    <iyz>0</iyz>
+                    <izz>0.000005</izz>
+                </inertia>
+                <pose>0 0 0 0 0 1.57075</pose>
+            </inertial>
+        </link>
+
+        <joint name="base_to_left_hinge" type="revolute">
+            <parent>base_link</parent>
+            <child>left_hinge</child>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit>
+                    <lower>-0.5</lower>
+                    <upper>0.5</upper>
+                    <effort>100</effort>
+                    <velocity>100</velocity>
+                </limit>
+            </axis>
+            <pose>0.2 0 0 0 0 0</pose>
+        </joint>
+
+        <!-- Right Front Wheel -->
+        <link name="right_front_wheel">
+            <visual name="right_front_wheel_visual">
+                <geometry>
+                    <cylinder>
+                        <radius>0.1</radius>
+                        <length>0.05</length>
+                    </cylinder>
+                </geometry>
+                <pose>0 0 0 -1.57075 -1.57075 0</pose>
+                <material>
+                    <ambient>0 0 0 1</ambient>
+                    <diffuse>0 0 0 1</diffuse>
+                </material>
+            </visual>
+            <collision name="right_front_wheel_collision">
+                <geometry>
+                    <cylinder>
+                        <radius>0.1</radius>
+                        <length>0.05</length>
+                    </cylinder>
+                </geometry>
+                <pose>0 0 0 -1.57075 -1.57075 0</pose>
+            </collision>
+            <inertial>
+                <mass>0.3</mass>
+                <inertia>
+                    <ixx>0.4</ixx>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyy>0.4</iyy>
+                    <iyz>0.0</iyz>
+                    <izz>0.2</izz>
+                </inertia>
+                <pose>0 0 0 -1.57075 -1.57075 0</pose>
+            </inertial>
+        </link>
+
+        <joint name="right_hinge_to_right_front_wheel" type="continuous">
+            <parent>right_hinge</parent>
+            <child>right_front_wheel</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+            </axis>
+            <pose>0 -0.2 0 0 0 0</pose>
+        </joint>
+
+        <!-- Right Front Wheel - Hinge -->
+        <link name="right_hinge">
+            <visual name="right_hinge_visual">
+                <geometry>
+                    <box>
+                        <size>0.20 0.02 0.02</size>
+                    </box>
+                </geometry>
+                <pose>0 -0.1 0 0 0 -1.57075</pose>
+                <material>
+                    <ambient>0 0 0 1</ambient>
+                    <diffuse>0 0 0 1</diffuse>
+                </material>
+            </visual>
+            <inertial>
+                <mass>0.01</mass>
+                <inertia>
+                    <ixx>0.000005</ixx>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyy>0.000005</iyy>
+                    <iyz>0</iyz>
+                    <izz>0.000005</izz>
+                </inertia>
+                <pose>0 0 0 0 0 -1.57075</pose>
+            </inertial>
+        </link>
+
+        <joint name="base_to_right_hinge" type="revolute">
+            <parent>base_link</parent>
+            <child>right_hinge</child>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit>
+                    <lower>-0.5</lower>
+                    <upper>0.5</upper>
+                    <effort>100</effort>
+                    <velocity>100</velocity>
+                </limit>
+            </axis>
+            <pose>0.2 0 0 0 0 0</pose>
+        </joint>
+
+        <!-- Left Back Wheel -->
+        <link name="left_back_wheel">
+            <visual name="left_back_wheel_visual">
+                <geometry>
+                    <cylinder>
+                        <radius>0.1</radius>
+                        <length>0.05</length>
+                    </cylinder>
+                </geometry>
+                <pose>0 0 0 1.57075 1.57075 0</pose>
+                <material>
+                    <ambient>0 0 0 1</ambient>
+                    <diffuse>0 0 0 1</diffuse>
+                </material>
+            </visual>
+            <collision name="left_back_wheel_collision">
+                <geometry>
+                    <cylinder>
+                        <radius>0.1</radius>
+                        <length>0.05</length>
+                    </cylinder>
+                </geometry>
+                <pose>0 0 0 1.57075 1.57075 0</pose>
+            </collision>
+            <inertial>
+                <mass>0.3</mass>
+                <inertia>
+                    <ixx>0.4</ixx>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyy>0.4</iyy>
+                    <iyz>0.0</iyz>
+                    <izz>0.2</izz>
+                </inertia>
+                <pose>0 0 0 1.57075 1.57075 0</pose>
+            </inertial>
+        </link>
+
+        <joint name="base_to_left_back_wheel" type="continuous">
+            <parent>base_link</parent>
+            <child>left_back_wheel</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+            </axis>
+            <pose>-0.2 0.175 0 0 0 0</pose>
+        </joint>
+
+        <!-- Right Back Wheel -->
+        <link name="right_back_wheel">
+            <visual name="right_back_wheel_visual">
+                <geometry>
+                    <cylinder>
+                        <radius>0.1</radius>
+                        <length>0.05</length>
+                    </cylinder>
+                </geometry>
+                <pose>0 0 0 -1.57075 -1.57075 0</pose>
+                <material>
+                    <ambient>0 0 0 1</ambient>
+                    <diffuse>0 0 0 1</diffuse>
+                </material>
+            </visual>
+            <collision name="right_back_wheel_collision">
+                <geometry>
+                    <cylinder>
+                        <radius>0.1</radius>
+                        <length>0.05</length>
+                    </cylinder>
+                </geometry>
+                <pose>0 0 0 -1.57075 -1.57075 0</pose>
+            </collision>
+            <inertial>
+                <mass>0.3</mass>
+                <inertia>
+                    <ixx>0.4</ixx>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyy>0.4</iyy>
+                    <iyz>0.0</iyz>
+                    <izz>0.2</izz>
+                </inertia>
+                <pose>0 0 0 -1.57075 -1.57075 0</pose>
+            </inertial>
+        </link>
+
+        <joint name="base_to_right_back_wheel" type="continuous">
+            <parent>base_link</parent>
+            <child>right_back_wheel</child>
+            <axis>
+                <xyz>0 1 0</xyz>
+            </axis>
+            <pose>-0.2 -0.175 0 0 0 0</pose>
+        </joint>
+    </model>
+</sdf>
+
