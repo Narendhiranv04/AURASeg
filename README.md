@@ -2,17 +2,17 @@
 
 **Attention-based Unified Residual Architecture for Semantic Segmentation**
 
-Code for our IEEE RA-L paper on traversable terrain segmentation for autonomous mobile robots.
+Semantic segmentation for traversable terrain detection in autonomous mobile robots.
 
 ## Overview
 
-AURASeg is a semantic segmentation architecture designed for accurate traversable region detection in unstructured outdoor environments. The model combines:
+AURASeg is designed for accurate traversable region detection in unstructured outdoor environments. The architecture combines:
 
 - ResNet-50 backbone with ASPP-Lite decoder
 - Attention-based Parallel Upsampling Decoder (APUD)
 - Residual Boundary Refinement Module (RBRM)
 
-Achieves state-of-the-art boundary-aware segmentation on our MIX dataset and generalizes well to the CARL-D benchmark.
+Trained on NVIDIA RTX 5060 GPU. Inference tested on NVIDIA Jetson Nano for edge deployment.
 
 ## Results
 
@@ -37,18 +37,6 @@ Achieves state-of-the-art boundary-aware segmentation on our MIX dataset and gen
 | DeepLabV3+ | 80.12 | 88.96 | 4.16 | 5.97 |
 | PIDNet | 79.79 | 88.76 | 4.08 | 6.16 |
 | **AURASeg (Ours)** | **80.41** | **89.14** | **4.84** | **6.83** |
-
-## Model Complexity
-
-| Model | Params (M) | GFLOPs | FPS |
-|-------|------------|--------|-----|
-| PSPNet | 24.31 | 11.12 | 164.9 |
-| DeepLabV3+ | 26.68 | 34.60 | 31.4 |
-| SegFormer-B2 | 24.72 | 19.86 | 28.5 |
-| PIDNet-L | 36.94 | 32.35 | 41.3 |
-| AURASeg | 43.05 | 148.87 | 14.2 |
-
-*Tested on RTX 5060 Laptop GPU at 384×640 resolution*
 
 ## Repository Structure
 
@@ -108,17 +96,6 @@ python benchmark_models/eval_all_benchmarks.py \
 
 ```bash
 pip install torch torchvision segmentation-models-pytorch opencv-python albumentations
-```
-
-## Citation
-
-```bibtex
-@article{auraseg2026,
-  title={AURASeg: Attention-based Unified Residual Architecture for Traversable Terrain Segmentation},
-  author={...},
-  journal={IEEE Robotics and Automation Letters},
-  year={2026}
-}
 ```
 
 ## License
