@@ -70,7 +70,7 @@ Achieves state-of-the-art boundary-aware segmentation on our MIX dataset and gen
 
 ## Pretrained Weights & Dataset
 
-**Google Drive:** [https://drive.google.com/drive/folders/1-xxxxxx](https://drive.google.com/drive/folders/YOUR_FOLDER_ID)
+**Google Drive:** [Download Here](https://drive.google.com/drive/folders/1BITy28E2k_Qxc3D9NG-TmrdfWwh-ZxFU?usp=sharing)
 
 Contents:
 - `checkpoints/MIX_dataset/` - Models trained on MIX dataset
