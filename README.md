@@ -1,12 +1,12 @@
 # AURASeg
 
-**Attention-based Unified Residual Architecture for Semantic Segmentation**
+**Attention-guided Upsampling with Residual Boundary-Assistive Refinement for Semantic Segmentation**
 
-Semantic segmentation for traversable terrain detection in autonomous mobile robots.
+Semantic segmentation for robot drivable area detection in autonomous mobile robots.
 
 ## Overview
 
-AURASeg is designed for accurate traversable region detection in unstructured outdoor environments. The architecture combines:
+AURASeg is designed for accurate drivable area segmentation in unstructured outdoor environments. The architecture combines:
 
 - ResNet-50 backbone with ASPP-Lite decoder
 - Attention-based Parallel Upsampling Decoder (APUD)
