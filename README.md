@@ -14,6 +14,10 @@ AURASeg is designed for accurate drivable area segmentation in unstructured outd
 
 Trained on NVIDIA RTX 5060 GPU. Inference tested on NVIDIA Jetson Nano for edge deployment.
 
+## Architecture
+
+![AURASeg Architecture](architecture.png)
+
 ## Results
 
 ### MIX Dataset (Ours)
