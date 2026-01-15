@@ -1,4 +1,4 @@
-<img width="1044" height="729" alt="image" src="https://github.com/user-attachments/assets/b91507bb-d6c4-403a-8b45-b4a95fc8d82b" /># AURASeg
+# AURASeg
 
 **Attention-guided Upsampling with Residual Boundary-Assistive Refinement for Semantic Segmentation**
 
