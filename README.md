@@ -1,8 +1,9 @@
-# AURASeg
+<img width="1044" height="729" alt="image" src="https://github.com/user-attachments/assets/b91507bb-d6c4-403a-8b45-b4a95fc8d82b" /># AURASeg
 
 **Attention-guided Upsampling with Residual Boundary-Assistive Refinement for Semantic Segmentation**
 
 Semantic segmentation for robot drivable area detection in autonomous mobile robots.
+Paper: https://arxiv.org/abs/2510.21536
 
 ## Overview
 
