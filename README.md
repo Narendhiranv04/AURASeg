@@ -3,6 +3,7 @@
 **Attention-guided Upsampling with Residual Boundary-Assistive Refinement for Semantic Segmentation**
 
 Semantic segmentation for robot drivable area detection in autonomous mobile robots.
+
 Paper: https://arxiv.org/abs/2510.21536
 
 ## Overview
