@@ -10,7 +10,7 @@ Paper: https://arxiv.org/abs/2510.21536
 
 AURASeg is designed for accurate drivable area segmentation in unstructured outdoor environments. The architecture combines:
 
-- ResNet-50 backbone with ASPP-Lite decoder
+- ResNet-18 backbone with ASPP-Lite decoder
 - Attention-based Parallel Upsampling Decoder (APUD)
 - Residual Boundary Refinement Module (RBRM)
 
@@ -56,7 +56,7 @@ Trained on NVIDIA RTX 5060 GPU. Inference tested on NVIDIA Jetson Nano for edge 
 │   └── model/new_network/     # Network architectures
 │       └── ablation/          # Ablation study variants (V1-V4)
 ├── runs/                      # MIX dataset results
-│   ├── auraseg_v4_resnet50/   # Main model outputs
+│   ├── auraseg_v4_resnet18/   # Main model outputs
 │   ├── benchmark_*/           # Benchmark model outputs
 │   └── plots/                 # Training curves and visualizations
 └── runs_carl/                 # CARL-D dataset results
@@ -80,7 +80,7 @@ Contents:
 ```bash
 python benchmark_models/train_auraseg_v4_resnet.py \
     --data_dir ./CommonDataset \
-    --output_dir ./runs/auraseg_v4_resnet50
+    --output_dir ./runs/auraseg_v4_resnet18
 ```
 
 ### Evaluation
@@ -88,7 +88,7 @@ python benchmark_models/train_auraseg_v4_resnet.py \
 ```bash
 python benchmark_models/eval_all_benchmarks.py \
     --data_dir ./CommonDataset \
-    --checkpoint ./runs/auraseg_v4_resnet50/checkpoints/best.pth
+    --checkpoint ./runs/auraseg_v4_resnet18/checkpoints/best.pth
 ```
 
 ## Requirements
