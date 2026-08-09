@@ -33,8 +33,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from auraseg_r18_wacv import AURASeg_R18_WACV
 from unified_dataset import Normalization, UnifiedDrivableAreaDataset
 
-# Import loss and metrics safely from existing script
-from train_auraseg_v4_resnet import CombinedLoss, compute_metrics, compute_boundary_metrics
+from wacv_losses import WACVCombinedLoss
+from wacv_metrics import compute_metrics, compute_boundary_metrics
 
 def set_seed(seed: int):
     """Set deterministic seeds for all frameworks"""
@@ -81,6 +81,20 @@ class Config:
         self.use_gate = args.use_gate
         self.seed = args.seed
         
+        # WACV Augmentation Parameters
+        self.aug_params = {
+            'shift_limit': 0.1,
+            'scale_limit': 0.1,
+            'rotate_limit': 15,
+            'brightness_limit': 0.2,
+            'contrast_limit': 0.2,
+            'gauss_var_limit': (10.0, 50.0),
+            'flip_p': 0.5,
+            'color_p': 0.3,
+            'noise_p': 0.2,
+            'geom_p': 0.5
+        }
+        
         # Name formulation
         sobel_str = "sobel" if self.use_sobel else "nosobel"
         gate_str = "gate" if self.use_gate else "nogate"
@@ -88,10 +102,14 @@ class Config:
         
         repo_root = Path(__file__).parent.parent
         self.OUTPUT_DIR = repo_root / "runs_wacv_new" / self.run_name
-        self.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        (self.OUTPUT_DIR / "checkpoints").mkdir(exist_ok=True)
         
     def to_dict(self):
+        import subprocess
+        try:
+            git_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], stderr=subprocess.STDOUT).decode('utf-8').strip()
+        except Exception:
+            git_commit = "unknown"
+            
         return {
             'backbone': 'resnet18',
             'fusion_type': self.fusion_type,
@@ -104,15 +122,24 @@ class Config:
             'optimizer': 'AdamW',
             'learning_rates': {'encoder': self.LR_ENCODER, 'decoder': self.LR_DECODER},
             'loss_configuration': {
-                'focal': self.FOCAL_WEIGHT,
-                'dice': self.DICE_WEIGHT,
-                'boundary': self.BOUNDARY_WEIGHT,
-                'aux': self.AUX_WEIGHT
+                'focal_alpha': 0.25,
+                'focal_gamma': 2.0,
+                'focal_weight': self.FOCAL_WEIGHT,
+                'dice_weight': self.DICE_WEIGHT,
+                'boundary_weight': self.BOUNDARY_WEIGHT,
+                'boundary_criterion': 'BCEWithLogitsLoss',
+                'boundary_target_method': 'morphological (dilate - erode)',
+                'boundary_target_kernel': '3x3',
+                'aux_weight_per_stage': self.AUX_WEIGHT,
+                'auxiliary_formulation': 'L_focal + L_dice',
+                'number_of_aux_stages': 4
             },
+            'augmentation': self.aug_params,
             'scheduler': 'CosineAnnealingLR',
             'epochs': self.EPOCHS,
             'batch_size': self.BATCH_SIZE,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'git_commit': git_commit
         }
 
 
@@ -130,11 +157,10 @@ class AURASegTrainer_R18:
             use_gate=config.use_gate
         ).to(device)
         
-        self.criterion = CombinedLoss(
-            focal_weight=config.FOCAL_WEIGHT,
-            dice_weight=config.DICE_WEIGHT,
-            boundary_weight=config.BOUNDARY_WEIGHT,
-            aux_weight=config.AUX_WEIGHT
+        self.criterion = WACVCombinedLoss(
+            focal_alpha=0.25,
+            focal_gamma=2.0,
+            dice_smooth=1.0
         )
         
         param_groups = self.model.get_param_groups(
@@ -261,6 +287,7 @@ def main():
     parser.add_argument('--no-gate', action='store_false', dest='use_gate', help='Disable gate (direct residual)')
     
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
+    parser.add_argument('--resume', action='store_true', help='Explicitly resume an existing run (overrides protection)')
     args = parser.parse_args()
     
     # 1. Set deterministic seed
@@ -268,7 +295,14 @@ def main():
     
     # 2. Config & Naming
     config = Config(args)
+    
     config_path = config.OUTPUT_DIR / "config.json"
+    if config_path.exists() and not args.resume:
+        raise RuntimeError(f"Experiment directory already exists. Refusing to overwrite:\n{config.OUTPUT_DIR}")
+        
+    config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    (config.OUTPUT_DIR / "checkpoints").mkdir(exist_ok=True)
+    
     with open(config_path, 'w') as f:
         json.dump(config.to_dict(), f, indent=4)
         
@@ -288,12 +322,14 @@ def main():
         dataset_root=config.DATA_ROOT, split='train',
         img_size=config.IMG_SIZE, transform=True,
         normalization=normalization, return_names=False,
+        aug_params=config.aug_params
     )
     
     val_dataset = UnifiedDrivableAreaDataset(
         dataset_root=config.DATA_ROOT, split='val',
         img_size=config.IMG_SIZE, transform=False,
         normalization=normalization, return_names=False,
+        aug_params=config.aug_params
     )
     
     train_loader = DataLoader(

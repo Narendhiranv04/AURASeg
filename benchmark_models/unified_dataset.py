@@ -143,12 +143,18 @@ class UnifiedDrivableAreaDataset(Dataset):
         transform: bool = True,
         normalization: Optional[Normalization] = None,
         return_names: bool = False,
+        aug_params: Optional[dict] = None,
     ):
         self.dataset_root = Path(dataset_root)
         self.split = split
         self.img_size = img_size
         self.return_names = return_names
         self.normalization = normalization or Normalization()
+        self.aug_params = aug_params or {
+            'shift_limit': 0.1, 'scale_limit': 0.1, 'rotate_limit': 10,
+            'brightness_limit': 0.2, 'contrast_limit': 0.2,
+            'gauss_var_limit': (10.0, 50.0), 'flip_p': 0.5, 'color_p': 0.3, 'noise_p': 0.2, 'geom_p': 0.5
+        }
 
         self.images_dir, self.labels_dir = resolve_split_dirs(self.dataset_root, split)
 
@@ -173,10 +179,19 @@ class UnifiedDrivableAreaDataset(Dataset):
             return A.Compose(
                 [
                     A.Resize(height=self.img_size[0], width=self.img_size[1]),
-                    A.HorizontalFlip(p=0.5),
-                    A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=10, p=0.5),
-                    A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.3),
-                    A.GaussNoise(var_limit=(10.0, 50.0), p=0.2),
+                    A.HorizontalFlip(p=self.aug_params['flip_p']),
+                    A.ShiftScaleRotate(
+                        shift_limit=self.aug_params['shift_limit'],
+                        scale_limit=self.aug_params['scale_limit'],
+                        rotate_limit=self.aug_params['rotate_limit'],
+                        p=self.aug_params['geom_p']
+                    ),
+                    A.RandomBrightnessContrast(
+                        brightness_limit=self.aug_params['brightness_limit'],
+                        contrast_limit=self.aug_params['contrast_limit'],
+                        p=self.aug_params['color_p']
+                    ),
+                    A.GaussNoise(var_limit=self.aug_params['gauss_var_limit'], p=self.aug_params['noise_p']),
                     A.Normalize(mean=mean, std=std),
                     ToTensorV2(),
                 ]
