@@ -15,14 +15,22 @@ from pathlib import Path
 from collections import defaultdict
 
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from tensorboard.backend.event_processing import event_accumulator
+
+# Font settings for IEEE RAL submission - avoid Type 3 fonts
+mpl.rcParams['pdf.fonttype'] = 42   # embed TrueType (Type 42), avoids Type 3
+mpl.rcParams['ps.fonttype']  = 42
+mpl.rcParams['font.family']  = 'serif'
+mpl.rcParams['font.serif']   = ['Times New Roman', 'Times', 'Nimbus Roman']
 
 # Style for publication
 plt.style.use('seaborn-v0_8-whitegrid')
 plt.rcParams.update({
     'font.size': 12,
     'font.family': 'serif',
+    'font.serif': ['Times New Roman', 'Times', 'Nimbus Roman'],
     'axes.labelsize': 14,
     'axes.titlesize': 14,
     'legend.fontsize': 10,
@@ -31,6 +39,8 @@ plt.rcParams.update({
     'figure.dpi': 150,
     'savefig.dpi': 300,
     'savefig.bbox': 'tight',
+    'pdf.fonttype': 42,
+    'ps.fonttype': 42,
 })
 
 
@@ -263,11 +273,15 @@ def plot_training_curves(data, output_dir):
     # Figure 3: Combined 2-row vertical layout for paper (larger fonts)
     plt.rcParams.update({
         'font.size': 14,
+        'font.family': 'serif',
+        'font.serif': ['Times New Roman', 'Times', 'Nimbus Roman'],
         'axes.titlesize': 16,
         'axes.labelsize': 14,
         'xtick.labelsize': 12,
         'ytick.labelsize': 12,
         'legend.fontsize': 12,
+        'pdf.fonttype': 42,
+        'ps.fonttype': 42,
     })
     
     fig, axes = plt.subplots(2, 1, figsize=(10, 10))

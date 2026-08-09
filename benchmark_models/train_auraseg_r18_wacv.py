@@ -1,0 +1,318 @@
+"""
+AURASeg WACV ResNet-18 Training Entry Point
+===========================================
+
+Training script for new controlled WACV ablations.
+Supports configurable fusion, attention, and RBRM components.
+Includes deterministic seeding and automatic config saving.
+
+Usage:
+    python benchmark_models/train_auraseg_r18_wacv.py --fusion-type mul --attention-mode full --use-sobel --use-gate --seed 42
+"""
+
+import os
+import sys
+import argparse
+import time
+import json
+import random
+from pathlib import Path
+from datetime import datetime
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from torch.cuda.amp import GradScaler, autocast
+from torch.optim.lr_scheduler import CosineAnnealingLR
+import numpy as np
+import cv2
+from tqdm import tqdm
+
+sys.path.insert(0, str(Path(__file__).parent))
+from auraseg_r18_wacv import AURASeg_R18_WACV
+from unified_dataset import Normalization, UnifiedDrivableAreaDataset
+
+# Import loss and metrics safely from existing script
+from train_auraseg_v4_resnet import CombinedLoss, compute_metrics, compute_boundary_metrics
+
+def set_seed(seed: int):
+    """Set deterministic seeds for all frameworks"""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+def seed_worker(worker_id):
+    """Seed data loader workers"""
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+class Config:
+    def __init__(self, args):
+        self.DATA_ROOT = Path(__file__).parent.parent / "CommonDataset"
+        self.NUM_CLASSES = 2
+        self.IMG_SIZE = (384, 640)
+        self.EPOCHS = 50
+        self.BATCH_SIZE = 8
+        self.LR_ENCODER = 1e-4
+        self.LR_DECODER = 1e-3
+        self.WEIGHT_DECAY = 0.01
+        self.FOCAL_WEIGHT = 0.5
+        self.DICE_WEIGHT = 0.5
+        self.BOUNDARY_WEIGHT = 0.2
+        self.AUX_WEIGHT = 0.1
+        self.PATIENCE = 10
+        self.MIN_DELTA = 0.0001
+        self.NUM_WORKERS = 4
+        self.PIN_MEMORY = True
+        self.USE_AMP = True
+        self.MEAN = [0.485, 0.456, 0.406]
+        self.STD = [0.229, 0.224, 0.225]
+        
+        self.fusion_type = args.fusion_type
+        self.attention_mode = args.attention_mode
+        self.use_sobel = args.use_sobel
+        self.use_gate = args.use_gate
+        self.seed = args.seed
+        
+        # Name formulation
+        sobel_str = "sobel" if self.use_sobel else "nosobel"
+        gate_str = "gate" if self.use_gate else "nogate"
+        self.run_name = f"r18_{self.fusion_type}_{self.attention_mode}_{sobel_str}_{gate_str}_seed{self.seed}"
+        
+        repo_root = Path(__file__).parent.parent
+        self.OUTPUT_DIR = repo_root / "runs_wacv_new" / self.run_name
+        self.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        (self.OUTPUT_DIR / "checkpoints").mkdir(exist_ok=True)
+        
+    def to_dict(self):
+        return {
+            'backbone': 'resnet18',
+            'fusion_type': self.fusion_type,
+            'attention_mode': self.attention_mode,
+            'use_sobel': self.use_sobel,
+            'use_gate': self.use_gate,
+            'seed': self.seed,
+            'dataset': str(self.DATA_ROOT),
+            'input_resolution': self.IMG_SIZE,
+            'optimizer': 'AdamW',
+            'learning_rates': {'encoder': self.LR_ENCODER, 'decoder': self.LR_DECODER},
+            'loss_configuration': {
+                'focal': self.FOCAL_WEIGHT,
+                'dice': self.DICE_WEIGHT,
+                'boundary': self.BOUNDARY_WEIGHT,
+                'aux': self.AUX_WEIGHT
+            },
+            'scheduler': 'CosineAnnealingLR',
+            'epochs': self.EPOCHS,
+            'batch_size': self.BATCH_SIZE,
+            'timestamp': datetime.now().isoformat()
+        }
+
+
+class AURASegTrainer_R18:
+    def __init__(self, config: Config, device: torch.device):
+        self.config = config
+        self.device = device
+        
+        self.model = AURASeg_R18_WACV(
+            num_classes=config.NUM_CLASSES,
+            encoder_weights='imagenet',
+            fusion_type=config.fusion_type,
+            attention_mode=config.attention_mode,
+            use_sobel=config.use_sobel,
+            use_gate=config.use_gate
+        ).to(device)
+        
+        self.criterion = CombinedLoss(
+            focal_weight=config.FOCAL_WEIGHT,
+            dice_weight=config.DICE_WEIGHT,
+            boundary_weight=config.BOUNDARY_WEIGHT,
+            aux_weight=config.AUX_WEIGHT
+        )
+        
+        param_groups = self.model.get_param_groups(
+            lr_encoder=config.LR_ENCODER,
+            lr_decoder=config.LR_DECODER
+        )
+        self.optimizer = torch.optim.AdamW(
+            param_groups,
+            weight_decay=config.WEIGHT_DECAY
+        )
+        
+        self.scheduler = CosineAnnealingLR(
+            self.optimizer,
+            T_max=config.EPOCHS,
+            eta_min=1e-6
+        )
+        
+        self.scaler = GradScaler(enabled=config.USE_AMP)
+        self.best_miou = 0.0
+        self.epochs_without_improvement = 0
+
+    def save_checkpoint(self, epoch: int, metrics: dict, is_best: bool = False):
+        checkpoint = {
+            'epoch': epoch,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'scheduler_state_dict': self.scheduler.state_dict(),
+            'scaler_state_dict': self.scaler.state_dict() if self.config.USE_AMP else None,
+            'best_miou': self.best_miou,
+            'epochs_without_improvement': self.epochs_without_improvement,
+            'metrics': metrics
+        }
+        latest_path = self.config.OUTPUT_DIR / "checkpoints" / "latest.pth"
+        torch.save(checkpoint, latest_path)
+        if is_best:
+            best_path = self.config.OUTPUT_DIR / "checkpoints" / "best.pth"
+            torch.save(checkpoint, best_path)
+
+    def train_epoch(self, train_loader: DataLoader, epoch: int) -> dict:
+        self.model.train()
+        total_loss = total_seg = total_bnd = total_aux = 0.0
+        pbar = tqdm(train_loader, desc=f"Train Epoch {epoch}")
+        
+        for images, masks in pbar:
+            images, masks = images.to(self.device), masks.to(self.device)
+            
+            self.optimizer.zero_grad()
+            with autocast(enabled=self.config.USE_AMP):
+                outputs = self.model(images, return_aux=True, return_boundary=True)
+                losses = self.criterion(outputs, masks)
+            
+            self.scaler.scale(losses['total']).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+            
+            total_loss += losses['total'].item()
+            total_seg += losses['seg'].item()
+            total_bnd += losses['boundary'].item()
+            total_aux += losses['aux'].item()
+            
+            pbar.set_postfix({'loss': f"{losses['total'].item():.4f}"})
+            
+        n = len(train_loader)
+        return {'loss': total_loss / n, 'seg': total_seg / n, 'bnd': total_bnd / n, 'aux': total_aux / n}
+
+    @torch.no_grad()
+    def validate(self, val_loader: DataLoader) -> dict:
+        self.model.eval()
+        all_preds, all_targets = [], []
+        total_loss = 0.0
+        
+        for images, masks in tqdm(val_loader, desc="Validating"):
+            images, masks = images.to(self.device), masks.to(self.device)
+            with autocast(enabled=self.config.USE_AMP):
+                outputs = self.model(images, return_aux=True, return_boundary=True)
+                losses = self.criterion(outputs, masks)
+                
+            total_loss += losses['total'].item()
+            preds = torch.argmax(outputs['main'], dim=1)
+            all_preds.append(preds.cpu().numpy())
+            all_targets.append(masks.cpu().numpy())
+            
+        all_preds = np.concatenate(all_preds, axis=0)
+        all_targets = np.concatenate(all_targets, axis=0)
+        
+        seg_metrics = compute_metrics(all_preds, all_targets)
+        boundary_metrics = compute_boundary_metrics(all_preds, all_targets)
+        return {'loss': total_loss / len(val_loader), **seg_metrics, **boundary_metrics}
+
+    def train(self, train_loader: DataLoader, val_loader: DataLoader):
+        print(f"\n{'='*70}\nTRAINING: {self.config.run_name}\n{'='*70}")
+        
+        for epoch in range(1, self.config.EPOCHS + 1):
+            train_metrics = self.train_epoch(train_loader, epoch)
+            val_metrics = self.validate(val_loader)
+            
+            print(f"[Epoch {epoch}] Train Loss: {train_metrics['loss']:.4f} | Val Loss: {val_metrics['loss']:.4f} | mIoU: {val_metrics['miou']:.4f}")
+            
+            self.scheduler.step()
+            
+            is_best = val_metrics['miou'] > self.best_miou + self.config.MIN_DELTA
+            if is_best:
+                self.best_miou = val_metrics['miou']
+                self.epochs_without_improvement = 0
+                print(f"  *** New best mIoU: {self.best_miou:.4f} ***")
+            else:
+                self.epochs_without_improvement += 1
+                
+            self.save_checkpoint(epoch, val_metrics, is_best)
+            
+            if self.epochs_without_improvement >= self.config.PATIENCE:
+                print(f"Early stopping triggered at epoch {epoch}")
+                break
+
+def main():
+    parser = argparse.ArgumentParser(description='Train AURASeg WACV ResNet-18 Ablations')
+    parser.add_argument('--fusion-type', type=str, choices=['mul', 'add', 'concat'], default='mul')
+    parser.add_argument('--attention-mode', type=str, choices=['full', 'none', 'se', 'spatial'], default='full')
+    
+    parser.add_argument('--use-sobel', action='store_true', default=True, help='Enable fixed Sobel prior (Default: True)')
+    parser.add_argument('--no-sobel', action='store_false', dest='use_sobel', help='Disable Sobel (learn edges from scratch)')
+    
+    parser.add_argument('--use-gate', action='store_true', default=True, help='Enable localized gate (Default: True)')
+    parser.add_argument('--no-gate', action='store_false', dest='use_gate', help='Disable gate (direct residual)')
+    
+    parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
+    args = parser.parse_args()
+    
+    # 1. Set deterministic seed
+    set_seed(args.seed)
+    
+    # 2. Config & Naming
+    config = Config(args)
+    config_path = config.OUTPUT_DIR / "config.json"
+    with open(config_path, 'w') as f:
+        json.dump(config.to_dict(), f, indent=4)
+        
+    print(f"[INFO] Config saved to {config_path}")
+    print(f"[INFO] Run Name: {config.run_name}")
+    print(f"[INFO] Seed: {args.seed}")
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Dataset Preparation
+    normalization = Normalization(mean=tuple(config.MEAN), std=tuple(config.STD))
+    
+    g = torch.Generator()
+    g.manual_seed(args.seed)
+    
+    train_dataset = UnifiedDrivableAreaDataset(
+        dataset_root=config.DATA_ROOT, split='train',
+        img_size=config.IMG_SIZE, transform=True,
+        normalization=normalization, return_names=False,
+    )
+    
+    val_dataset = UnifiedDrivableAreaDataset(
+        dataset_root=config.DATA_ROOT, split='val',
+        img_size=config.IMG_SIZE, transform=False,
+        normalization=normalization, return_names=False,
+    )
+    
+    train_loader = DataLoader(
+        train_dataset, batch_size=config.BATCH_SIZE,
+        shuffle=True, num_workers=config.NUM_WORKERS,
+        pin_memory=config.PIN_MEMORY, drop_last=True,
+        worker_init_fn=seed_worker, generator=g
+    )
+    
+    val_loader = DataLoader(
+        val_dataset, batch_size=config.BATCH_SIZE,
+        shuffle=False, num_workers=config.NUM_WORKERS,
+        pin_memory=config.PIN_MEMORY, drop_last=False,
+        worker_init_fn=seed_worker
+    )
+    
+    # Train
+    trainer = AURASegTrainer_R18(config, device)
+    trainer.train(train_loader, val_loader)
+
+if __name__ == "__main__":
+    main()
