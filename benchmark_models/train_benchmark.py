@@ -39,17 +39,16 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-from wacv_metrics import compute_boundary_metrics
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torch.amp import autocast, GradScaler
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import numpy as np
 import cv2
-# import albumentations as A
-# from albumentations.pytorch import ToTensorV2
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -66,19 +65,10 @@ from unified_dataset import Normalization, UnifiedDrivableAreaDataset
 class Config:
     """Unified configuration for benchmark training."""
     
-# Data paths (relative to AURASeg root)
+    # Data paths (relative to AURASeg root)
     DATA_ROOT = Path(__file__).parent.parent
-    
-    def __init__(self, args):
-        self.dataset_type = getattr(args, 'dataset', 'mix')
-        if self.dataset_type == 'carl-d':
-            self.dataset_root = self.DATA_ROOT / "carl-dataset"
-        else:
-            self.dataset_root = self.DATA_ROOT / "CommonDataset"
-        self.model_name = args.model
-        self.smoke_test = getattr(args, 'smoke_test', False)
-        self.run_name = f"benchmark_{self.model_name}_{self.dataset_type}"
-        self.output_dir = self.DATA_ROOT / "runs" / self.run_name
+    IMAGE_DIR = DATA_ROOT / "CommonDataset" / "images"
+    MASK_DIR = DATA_ROOT / "CommonDataset" / "labels"
     
     # Image size
     IMG_SIZE = (384, 640)  # (H, W)
@@ -119,6 +109,78 @@ class Config:
 # =============================================================================
 # Dataset
 # =============================================================================
+
+class DrivableAreaDataset(Dataset):
+    """Dataset for drivable area segmentation."""
+    
+    def __init__(self, image_dir, mask_dir, img_size, split='train', 
+                 transform=True, mean=None, std=None):
+        self.image_dir = Path(image_dir) / split
+        self.mask_dir = Path(mask_dir) / split
+        self.img_size = img_size
+        self.transform_enabled = transform
+        self.mean = mean or Config.MEAN
+        self.std = std or Config.STD
+        
+        # Get all images
+        self.images = sorted(list(self.image_dir.glob('*.jpg')) + 
+                            list(self.image_dir.glob('*.png')))
+        
+        print(f"[{split.upper()}] Found {len(self.images)} images")
+        
+        # Build transforms
+        self.transform = self._build_transforms(split, transform)
+    
+    def _build_transforms(self, split, use_augment):
+        """Build albumentations transform pipeline."""
+        if split == 'train' and use_augment:
+            return A.Compose([
+                A.Resize(height=self.img_size[0], width=self.img_size[1]),
+                A.HorizontalFlip(p=0.5),
+                A.ShiftScaleRotate(
+                    shift_limit=0.1, scale_limit=0.1, rotate_limit=10, p=0.5
+                ),
+                A.RandomBrightnessContrast(
+                    brightness_limit=0.2, contrast_limit=0.2, p=0.3
+                ),
+                A.GaussNoise(var_limit=(10.0, 50.0), p=0.2),
+                A.Normalize(mean=self.mean, std=self.std),
+                ToTensorV2()
+            ])
+        else:
+            return A.Compose([
+                A.Resize(height=self.img_size[0], width=self.img_size[1]),
+                A.Normalize(mean=self.mean, std=self.std),
+                ToTensorV2()
+            ])
+    
+    def __len__(self):
+        return len(self.images)
+    
+    def __getitem__(self, idx):
+        # Load image
+        img_path = self.images[idx]
+        image = cv2.imread(str(img_path))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # Load mask
+        mask_name = img_path.stem + '.png'
+        mask_path = self.mask_dir / mask_name
+        if not mask_path.exists():
+            mask_path = self.mask_dir / (img_path.stem + '.jpg')
+        
+        mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        
+        # Binarize mask (drivable=1, non-drivable=0)
+        mask = (mask > 127).astype(np.uint8)
+        
+        # Apply transforms
+        transformed = self.transform(image=image, mask=mask)
+        image = transformed['image'].float()
+        mask = transformed['mask'].long()
+        
+        return image, mask
+
 
 # =============================================================================
 # Loss Functions
@@ -309,7 +371,7 @@ class BenchmarkTrainer:
         set_seed(42)
         
         # Override config with args
-        self.config = Config(args)
+        self.config = Config()
         if args.epochs:
             self.config.EPOCHS = args.epochs
         if args.batch_size:
@@ -341,7 +403,7 @@ class BenchmarkTrainer:
         self._setup_data()
         
         # Logging
-        self.writer = None
+        self.writer = SummaryWriter(self.log_dir)
         self.best_miou = 0.0
         self.start_epoch = 1
         
@@ -491,8 +553,7 @@ class BenchmarkTrainer:
         
         print(f"\nStarting training from epoch {self.start_epoch}\n")
         
-        epochs_to_run = 2 if self.config.smoke_test else self.config.EPOCHS
-        for epoch in range(self.start_epoch, epochs_to_run + 1):
+        for epoch in range(self.start_epoch, self.config.EPOCHS + 1):
             print(f"\n{'=' * 60}")
             print(f"Epoch {epoch}/{self.config.EPOCHS}")
             print(f"{'=' * 60}")
@@ -507,11 +568,11 @@ class BenchmarkTrainer:
             self.scheduler.step()
             
             # Log to tensorboard
-            pass # writer.add_scalar('train/loss', train_loss, epoch)
-            pass # writer.add_scalar('val/miou', val_metrics['miou'], epoch)
-            pass # writer.add_scalar('val/iou_drivable', val_metrics['iou_drivable'], epoch)
-            pass # writer.add_scalar('val/dice', val_metrics['mdice'], epoch)
-            pass # writer.add_scalar('lr', self.optimizer.param_groups[0]['lr'], epoch)
+            self.writer.add_scalar('train/loss', train_loss, epoch)
+            self.writer.add_scalar('val/miou', val_metrics['miou'], epoch)
+            self.writer.add_scalar('val/iou_drivable', val_metrics['iou_drivable'], epoch)
+            self.writer.add_scalar('val/dice', val_metrics['mdice'], epoch)
+            self.writer.add_scalar('lr', self.optimizer.param_groups[0]['lr'], epoch)
             
             # Print epoch summary
             current_lr = self.optimizer.param_groups[0]['lr']
@@ -542,97 +603,7 @@ class BenchmarkTrainer:
         print(f"Checkpoints: {self.checkpoint_dir}")
         print("=" * 60)
         
-        self.writer = None
-
-
-    def evaluate_test_set(self):
-        """Evaluate the best model on the test set."""
-        print("\n" + "=" * 60)
-        print("EVALUATING ON TEST SET")
-        print("=" * 60)
-        
-        best_path = self.checkpoint_dir / 'best.pth'
-        if not best_path.exists():
-            print("Error: best.pth not found!")
-            return
-            
-        print(f"Loading best checkpoint: {best_path}")
-        checkpoint = torch.load(best_path, map_location=self.device, weights_only=False)
-        self.model.load_state_dict(checkpoint['model_state_dict'])
-        
-        self.model.eval()
-        
-        # We need a test loader
-        normalization = Normalization(mean=tuple(self.config.MEAN), std=tuple(self.config.STD))
-        test_dataset = UnifiedDrivableAreaDataset(
-            dataset_root=self.dataset_root,
-            split='test',
-            
-            img_size=self.config.IMG_SIZE,
-            transform=False,
-            normalization=normalization,
-            return_names=False
-        )
-        test_loader = DataLoader(
-            test_dataset,
-            batch_size=self.config.BATCH_SIZE,
-            shuffle=False,
-            num_workers=self.config.NUM_WORKERS,
-            pin_memory=True
-        )
-        
-        pbar = tqdm(test_loader, desc="Testing", leave=False)
-        
-        miou_meter = AverageMeter()
-        iou_drivable_meter = AverageMeter()
-        mdice_meter = AverageMeter()
-        b_iou_meter = AverageMeter()
-        b_f1_meter = AverageMeter()
-        
-        with torch.no_grad():
-            for batch_idx, (images, masks) in enumerate(pbar):
-                if self.config.smoke_test and batch_idx >= 2:
-                    break
-                images = images.to(self.device)
-                masks = masks.to(self.device)
-                
-                outputs = self.model(images)
-                if isinstance(outputs, dict):
-                    outputs = outputs[self.output_key]
-                elif isinstance(outputs, tuple):
-                    outputs = outputs[0]
-                
-                outputs = F.interpolate(outputs, size=masks.shape[-2:], mode='bilinear', align_corners=False)
-                preds = torch.argmax(outputs, dim=1)
-                
-                batch_size = images.size(0)
-                for i in range(batch_size):
-                    pred = preds[i].cpu().numpy()
-                    target = masks[i].cpu().numpy()
-                    
-                    metrics = compute_boundary_metrics(np.expand_dims(pred, 0), np.expand_dims(target, 0), k=2)
-                    b_iou_meter.update(metrics["boundary_iou"])
-                    b_f1_meter.update(metrics["boundary_f1"])
-                    
-                    
-                    
-                    # Classic mIoU
-                    intersection = np.logical_and(target == 1, pred == 1).sum()
-                    union = np.logical_or(target == 1, pred == 1).sum()
-                    if union > 0:
-                        iou_d = intersection / union
-                    else:
-                        iou_d = 1.0 if np.sum(target == 1) == 0 else 0.0
-                        
-                    iou_drivable_meter.update(iou_d)
-                    miou_meter.update(iou_d)  # Simplified mIoU for single class
-                    dice = (2 * intersection) / ((pred == 1).sum() + (target == 1).sum() + 1e-6)
-                    mdice_meter.update(dice)
-
-        print(f"\n[TEST] mIoU: {miou_meter.avg:.4f}, IoU (Drivable): {iou_drivable_meter.avg:.4f}, Dice: {mdice_meter.avg:.4f}")
-        print(f"[TEST] BIoU (k=2): {b_iou_meter.avg:.4f}, BF1 (k=2): {b_f1_meter.avg:.4f}")
-        
-
+        self.writer.close()
     
     def train_epoch(self, epoch: int) -> float:
         """Train for one epoch."""
@@ -642,8 +613,6 @@ class BenchmarkTrainer:
         pbar = tqdm(self.train_loader, desc=f"Train Epoch {epoch}", leave=False)
         
         for batch_idx, (images, masks) in enumerate(pbar):
-            if self.config.smoke_test and batch_idx >= 2:
-                break
             images = images.to(self.device)
             masks = masks.to(self.device)
             
@@ -711,8 +680,6 @@ class BenchmarkTrainer:
         for key in all_metrics[0].keys():
             avg_metrics[key] = sum(m[key] for m in all_metrics) / len(all_metrics)
         
-        from utils import AverageMeter, EarlyStopping, save_checkpoint, set_seed
-        from wacv_metrics import compute_boundary_metrics
         return avg_metrics
     
     def _save_checkpoint(self, epoch: int, is_best: bool = False, filename: str = None):
@@ -752,8 +719,6 @@ def parse_args():
     parser.add_argument('--model', type=str, required=True,
                         choices=['deeplabv3plus', 'segformer', 'upernet', 'dpt', 'mask2former', 'fcn', 'pspnet', 'pidnet'],
                         help='Benchmark model to train')
-    parser.add_argument('--dataset', type=str, choices=['mix', 'carl-d'], default='mix')
-    parser.add_argument('--smoke-test', action='store_true', default=False)
     
     # Training params
     parser.add_argument('--epochs', type=int, default=50,
@@ -800,7 +765,6 @@ def main():
     # Create trainer and start training
     trainer = BenchmarkTrainer(args.model, args)
     trainer.train()
-    trainer.evaluate_test_set()
 
 
 if __name__ == "__main__":

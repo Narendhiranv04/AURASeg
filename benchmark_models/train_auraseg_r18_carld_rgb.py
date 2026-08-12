@@ -56,7 +56,7 @@ def seed_worker(worker_id):
 
 class Config:
     def __init__(self, args):
-        self.DATA_ROOT = Path(__file__).parent.parent / "CommonDataset"
+        self.DATA_ROOT = Path(__file__).parent.parent / "carl-dataset"
         self.NUM_CLASSES = 2
         self.IMG_SIZE = (384, 640)
         self.EPOCHS = 50
@@ -85,6 +85,10 @@ class Config:
         self.use_gate = args.use_gate
         self.simple_boundary_head = getattr(args, 'simple_boundary_head', False)
         self.seed = args.seed
+        self.smoke_test = getattr(args, 'smoke_test', False)
+        self.eval_best_only = getattr(args, 'eval_best_only', False)
+        self.resume_from = getattr(args, 'resume_from', None)
+
         
         # WACV Augmentation Parameters
         self.aug_params = {
@@ -113,7 +117,7 @@ class Config:
         if hasattr(args, 'output_root') and args.output_root:
             self.output_root_path = Path(args.output_root)
         else:
-            self.output_root_path = repo_root / "runs_wacv_new"
+            self.output_root_path = repo_root / "runs_carld_rgb"
             
         self.OUTPUT_DIR = self.output_root_path / self.run_name
         self.resume_from = getattr(args, 'resume_from', None)
@@ -213,6 +217,20 @@ class AURASegTrainer_R18:
         
         self.scaler = GradScaler(enabled=config.USE_AMP)
         self.best_miou = 0.0
+
+        if self.config.resume_from:
+            print(f"Resuming from {self.config.resume_from}")
+            checkpoint = torch.load(self.config.resume_from, map_location=self.device)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            if self.scheduler and 'scheduler_state_dict' in checkpoint:
+                self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            self.start_epoch = checkpoint['epoch'] + 1
+            self.best_miou = checkpoint['best_miou']
+            print(f"Resumed at epoch {self.start_epoch} with best mIoU {self.best_miou}")
+        else:
+            self.start_epoch = 1
+
         self.epochs_without_improvement = 0
         self.start_epoch = 1
         
@@ -278,6 +296,8 @@ class AURASegTrainer_R18:
         
         self.optimizer.zero_grad()
         for i, (images, masks) in enumerate(pbar):
+            if self.config.smoke_test and i >= 4:
+                break
             images, masks = images.to(self.device), masks.to(self.device)
             
             with autocast(enabled=self.config.USE_AMP):
@@ -300,11 +320,7 @@ class AURASegTrainer_R18:
             
             pbar.set_postfix({'loss': f"{losses['total'].item():.4f}"})
             
-        # Handle remaining gradients if drop_last=False
-        if len(train_loader) % self.config.GRAD_ACCUM_STEPS != 0:
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-            self.optimizer.zero_grad()
+        # For smoke tests or full loops, the scaler.step is handled inside the loop for accum steps.
             
         n = len(train_loader)
         return {'loss': total_loss / n, 'seg': total_seg / n, 'bnd': total_bnd / n, 'aux': total_aux / n}
@@ -315,7 +331,9 @@ class AURASegTrainer_R18:
         all_preds, all_targets = [], []
         total_loss = 0.0
         
-        for images, masks in tqdm(val_loader, desc="Validating"):
+        for batch_idx, (images, masks) in enumerate(tqdm(val_loader, desc="Validating")):
+            if self.config.smoke_test and batch_idx >= 2:
+                break
             images, masks = images.to(self.device), masks.to(self.device)
             with autocast(enabled=self.config.USE_AMP):
                 outputs = self.model(images, return_aux=True, return_boundary=True)
@@ -332,6 +350,33 @@ class AURASegTrainer_R18:
         seg_metrics = compute_metrics(all_preds, all_targets)
         boundary_metrics = compute_boundary_metrics(all_preds, all_targets)
         return {'loss': total_loss / len(val_loader), **seg_metrics, **boundary_metrics}
+
+    def evaluate_test_set(self, test_loader: DataLoader, output_dir: Path):
+        print(f"\n{'='*70}\nEVALUATING ON TEST SET\n{'='*70}")
+        best_path = output_dir / "checkpoints" / "best.pth"
+        if not best_path.exists():
+            raise RuntimeError(f"Cannot find best.pth at {best_path}")
+            
+        checkpoint = torch.load(best_path, map_location=self.device, weights_only=False)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        print(f"Loaded best.pth from Epoch {checkpoint['epoch']}")
+        
+        test_metrics = self.validate(test_loader)
+        
+        print("\n[TEST RESULTS]")
+        print(f"mIoU (Drivable): {test_metrics['miou']:.4f}")
+        print(f"IoU (Drivable): {test_metrics['iou_1']:.4f}")
+        print(f"F1 (Drivable):  {test_metrics['f1_1']:.4f}")
+        
+        # Save metrics
+        results = {
+            'test_miou': test_metrics['miou'],
+            'test_iou_drivable': test_metrics['iou_1'],
+            'test_f1_drivable': test_metrics['f1_1'],
+        }
+        with open(output_dir / "test_results.json", "w") as f:
+            json.dump(results, f, indent=4)
+        print(f"Test results saved to {output_dir / 'test_results.json'}")
 
     def train(self, train_loader: DataLoader, val_loader: DataLoader):
         print(f"\n{'='*70}\nTRAINING: {self.config.run_name}\n{'='*70}")
@@ -372,8 +417,12 @@ def main():
     parser.add_argument('--simple-boundary-head', action='store_true', default=False, help='Use simple boundary head instead of RBRM encoder-decoder')
     
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
-    parser.add_argument('--output-root', type=str, default='', help='Root directory for output (Default: runs_wacv_new)')
-    parser.add_argument('--resume-from', type=str, default=None, help='Path to checkpoint to resume from (bypass overwrite protection)')
+    parser.add_argument('--output-root', type=str, default='runs_carld_rgb', help='Root directory for output (Default: runs_carld_rgb)')
+        
+    parser.add_argument('--smoke-test', action='store_true', help='Smoke test mode (few batches)')
+    parser.add_argument('--eval-best-only', action='store_true', help='Evaluate best checkpoint on test set')
+    parser.add_argument('--resume-from', type=str, default=None, help='Path to checkpoint to resume from')
+
     args = parser.parse_args()
     
     # 1. Set deterministic seed
@@ -382,9 +431,18 @@ def main():
     # 2. Config & Naming
     config = Config(args)
     
+    
+    if config.smoke_test:
+        config.OUTPUT_DIR = Path(args.output_root if args.output_root else 'runs_carld_rgb') / f"{config.run_name}_smoke"
+        
     config_path = config.OUTPUT_DIR / "config.json"
-    if config_path.exists() and not getattr(args, 'resume_from', None):
-        raise RuntimeError(f"Experiment directory already exists. Refusing to overwrite:\n{config.OUTPUT_DIR}")
+    if config.eval_best_only:
+        if not config.OUTPUT_DIR.exists():
+            raise RuntimeError(f"--eval-best-only requires an existing output directory: {config.OUTPUT_DIR}")
+
+    elif config_path.exists() and not getattr(args, 'resume_from', None):
+        raise RuntimeError(f"Experiment directory already exists. Refusing to overwrite:\\n{config.OUTPUT_DIR}")
+
         
     config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (config.OUTPUT_DIR / "checkpoints").mkdir(exist_ok=True)
@@ -432,9 +490,35 @@ def main():
         worker_init_fn=seed_worker
     )
     
-    # Train
+    
+    test_dataset = UnifiedDrivableAreaDataset(
+        dataset_root=config.DATA_ROOT, split='test',
+        img_size=config.IMG_SIZE, transform=False,
+        normalization=normalization, return_names=False,
+        aug_params=config.aug_params
+    )
+    test_loader = DataLoader(
+        test_dataset, batch_size=config.VAL_BATCH_SIZE,
+        shuffle=False, num_workers=config.NUM_WORKERS,
+        pin_memory=config.PIN_MEMORY, drop_last=False,
+        worker_init_fn=seed_worker
+    )
+    
+    print(f"Dataset Root: {config.DATA_ROOT}")
+    assert str(config.DATA_ROOT).endswith("carl-dataset"), "Dataset root must be carl-dataset"
+    print(f"Train count = {len(train_dataset)}")
+    print(f"Val count = {len(val_dataset)}")
+    print(f"Test count = {len(test_dataset)}")
+    
     trainer = AURASegTrainer_R18(config, device)
+    
+    if args.eval_best_only:
+        trainer.evaluate_test_set(test_loader, config.OUTPUT_DIR)
+        return
+        
+
     trainer.train(train_loader, val_loader)
+    trainer.evaluate_test_set(test_loader, config.OUTPUT_DIR)
 
 if __name__ == "__main__":
     main()
