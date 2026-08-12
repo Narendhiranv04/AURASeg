@@ -60,6 +60,8 @@ class Config:
         self.NUM_CLASSES = 2
         self.IMG_SIZE = (384, 640)
         self.EPOCHS = 50
+        if getattr(args, 'smoke_test', False):
+            self.EPOCHS = 2
         self.MICRO_BATCH_SIZE = 4
         self.GRAD_ACCUM_STEPS = 2
         self.VAL_BATCH_SIZE = 4
@@ -218,19 +220,6 @@ class AURASegTrainer_R18:
         self.scaler = GradScaler(enabled=config.USE_AMP)
         self.best_miou = 0.0
 
-        if self.config.resume_from:
-            print(f"Resuming from {self.config.resume_from}")
-            checkpoint = torch.load(self.config.resume_from, map_location=self.device)
-            self.model.load_state_dict(checkpoint['model_state_dict'])
-            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            if self.scheduler and 'scheduler_state_dict' in checkpoint:
-                self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-            self.start_epoch = checkpoint['epoch'] + 1
-            self.best_miou = checkpoint['best_miou']
-            print(f"Resumed at epoch {self.start_epoch} with best mIoU {self.best_miou}")
-        else:
-            self.start_epoch = 1
-
         self.epochs_without_improvement = 0
         self.start_epoch = 1
         
@@ -275,19 +264,11 @@ class AURASegTrainer_R18:
         except Exception as e:
             if latest_tmp.exists():
                 latest_tmp.unlink()
-            raise RuntimeError(f"Failed to save latest checkpoint: {e}")
-            
-        # 3. Duplicate serialization avoidance for best.pth
+        # 2. Save best and last checkpoints
         if is_best:
-            best_path = self.config.OUTPUT_DIR / "checkpoints" / "best.pth"
-            best_tmp = best_path.with_suffix(".pth.tmp")
-            try:
-                shutil.copy2(latest_path, best_tmp)
-                os.replace(best_tmp, best_path)
-            except Exception as e:
-                if best_tmp.exists():
-                    best_tmp.unlink()
-                raise RuntimeError(f"Failed to copy to best checkpoint: {e}")
+            torch.save(checkpoint, self.config.OUTPUT_DIR / "checkpoints" / "best.pth")
+            
+        torch.save(checkpoint, self.config.OUTPUT_DIR / "checkpoints" / "last.pth")
 
     def train_epoch(self, train_loader: DataLoader, epoch: int) -> dict:
         self.model.train()
@@ -332,7 +313,7 @@ class AURASegTrainer_R18:
         total_loss = 0.0
         
         for batch_idx, (images, masks) in enumerate(tqdm(val_loader, desc="Validating")):
-            if self.config.smoke_test and batch_idx >= 2:
+            if self.config.smoke_test and batch_idx >= 3:
                 break
             images, masks = images.to(self.device), masks.to(self.device)
             with autocast(enabled=self.config.USE_AMP):
@@ -364,19 +345,28 @@ class AURASegTrainer_R18:
         test_metrics = self.validate(test_loader)
         
         print("\n[TEST RESULTS]")
-        print(f"mIoU (Drivable): {test_metrics['miou']:.4f}")
-        print(f"IoU (Drivable): {test_metrics['iou_1']:.4f}")
-        print(f"F1 (Drivable):  {test_metrics['f1_1']:.4f}")
+        print(f"mIoU: {test_metrics['miou']:.4f}")
+        print(f"IoU (Drivable): {test_metrics['iou_drivable']:.4f}")
+        print(f"F1 (Drivable):  {test_metrics['f1']:.4f}")
+        print(f"Boundary F1:    {test_metrics['boundary_f1']:.4f}")
         
         # Save metrics
         results = {
-            'test_miou': test_metrics['miou'],
-            'test_iou_drivable': test_metrics['iou_1'],
-            'test_f1_drivable': test_metrics['f1_1'],
+            'best_epoch': checkpoint['epoch'],
+            'best_val_miou': checkpoint.get('best_miou', 0.0),
         }
+        results.update(test_metrics)
+        
         with open(output_dir / "test_results.json", "w") as f:
             json.dump(results, f, indent=4)
-        print(f"Test results saved to {output_dir / 'test_results.json'}")
+            
+        import csv
+        with open(output_dir / "test_results.csv", "w", newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(results.keys())
+            writer.writerow(results.values())
+            
+        print(f"Test results saved to {output_dir / 'test_results.json'} and test_results.csv")
 
     def train(self, train_loader: DataLoader, val_loader: DataLoader):
         print(f"\n{'='*70}\nTRAINING: {self.config.run_name}\n{'='*70}")
@@ -440,15 +430,16 @@ def main():
         if not config.OUTPUT_DIR.exists():
             raise RuntimeError(f"--eval-best-only requires an existing output directory: {config.OUTPUT_DIR}")
 
-    elif config_path.exists() and not getattr(args, 'resume_from', None):
+    elif config_path.exists() and not getattr(args, 'resume_from', None) and not config.smoke_test:
         raise RuntimeError(f"Experiment directory already exists. Refusing to overwrite:\\n{config.OUTPUT_DIR}")
 
         
     config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (config.OUTPUT_DIR / "checkpoints").mkdir(exist_ok=True)
     
-    with open(config_path, 'w') as f:
-        json.dump(config.to_dict(), f, indent=4)
+    if not config.eval_best_only:
+        with open(config_path, 'w') as f:
+            json.dump(config.to_dict(), f, indent=4)
         
     print(f"[INFO] Config saved to {config_path}")
     print(f"[INFO] Run Name: {config.run_name}")
@@ -504,11 +495,11 @@ def main():
         worker_init_fn=seed_worker
     )
     
-    print(f"Dataset Root: {config.DATA_ROOT}")
     assert str(config.DATA_ROOT).endswith("carl-dataset"), "Dataset root must be carl-dataset"
-    print(f"Train count = {len(train_dataset)}")
-    print(f"Val count = {len(val_dataset)}")
-    print(f"Test count = {len(test_dataset)}")
+    print(f"train={len(train_dataset)}")
+    print(f"val={len(val_dataset)}")
+    print(f"test={len(test_dataset)}")
+    print(f"dataset root {config.DATA_ROOT}")
     
     trainer = AURASegTrainer_R18(config, device)
     

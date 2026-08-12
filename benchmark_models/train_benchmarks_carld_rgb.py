@@ -56,6 +56,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "kobuki-yolop" / "model" /
 
 from model_factory import get_benchmark_model, BENCHMARK_MODELS
 from unified_dataset import Normalization, UnifiedDrivableAreaDataset
+from wacv_metrics import compute_metrics, compute_boundary_metrics
 
 
 # =============================================================================
@@ -73,6 +74,8 @@ class Config:
         self.BATCH_SIZE = args.batch_size if hasattr(args, "batch_size") else 4
         self.NUM_WORKERS = args.num_workers if hasattr(args, "num_workers") else 4
         self.EPOCHS = args.epochs if hasattr(args, "epochs") else 50
+        if self.smoke_test:
+            self.EPOCHS = 2
         
     # Data paths (relative to AURASeg root)
     DATA_ROOT = Path(__file__).parent.parent
@@ -85,6 +88,8 @@ class Config:
     
     # Training hyperparams (identical to AURASeg V4)
     EPOCHS = 50
+    MICRO_BATCH_SIZE = 4
+    GRAD_ACCUM_STEPS = 2
     BATCH_SIZE = 8
     LEARNING_RATE = 1e-3
     WEIGHT_DECAY = 1e-4
@@ -247,56 +252,6 @@ class CombinedLoss(nn.Module):
         return self.focal_weight * focal + self.dice_weight * dice
 
 
-# =============================================================================
-# Metrics
-# =============================================================================
-
-def compute_metrics(preds, targets, num_classes=2):
-    """Compute segmentation metrics."""
-    preds = preds.numpy() if torch.is_tensor(preds) else preds
-    targets = targets.numpy() if torch.is_tensor(targets) else targets
-    
-    metrics = {}
-    
-    # IoU per class
-    ious = []
-    for cls in range(num_classes):
-        pred_cls = (preds == cls)
-        target_cls = (targets == cls)
-        
-        intersection = (pred_cls & target_cls).sum()
-        union = (pred_cls | target_cls).sum()
-        
-        if union > 0:
-            iou = intersection / union
-        else:
-            iou = 1.0 if intersection == 0 else 0.0
-        
-        ious.append(iou)
-    
-    metrics['iou_background'] = ious[0]
-    metrics['iou_drivable'] = ious[1] if len(ious) > 1 else 0.0
-    metrics['miou'] = np.mean(ious)
-    
-    # Dice score
-    pred_fg = (preds == 1)
-    target_fg = (targets == 1)
-    intersection = (pred_fg & target_fg).sum()
-    dice = (2 * intersection) / (pred_fg.sum() + target_fg.sum() + 1e-6)
-    metrics['mdice'] = dice
-    
-    # Precision, Recall
-    tp = (pred_fg & target_fg).sum()
-    fp = (pred_fg & ~target_fg).sum()
-    fn = (~pred_fg & target_fg).sum()
-    
-    metrics['precision'] = tp / (tp + fp + 1e-6)
-    metrics['recall'] = tp / (tp + fn + 1e-6)
-    metrics['f1'] = 2 * metrics['precision'] * metrics['recall'] / (
-        metrics['precision'] + metrics['recall'] + 1e-6
-    )
-    
-    return metrics
 
 
 # =============================================================================
@@ -389,11 +344,15 @@ class BenchmarkTrainer:
             self.config.LEARNING_RATE = args.lr
         if getattr(args, "num_workers", None) is not None:
             self.config.NUM_WORKERS = args.num_workers
+            
+        if self.config.smoke_test:
+            self.config.EPOCHS = 2
 
         # Dataset setup
         dataset_root = Path(args.dataset_root)
         if not dataset_root.is_absolute():
             dataset_root = self.repo_root / dataset_root
+        assert str(dataset_root).endswith('carl-dataset'), f"Dataset root MUST end in carl-dataset, got {dataset_root}"
         self.dataset_root = dataset_root
         self.train_split = args.train_split
         self.val_split = args.val_split
@@ -431,7 +390,14 @@ class BenchmarkTrainer:
         base_dir = Path(self.args.runs_dir)
         if not base_dir.is_absolute():
             base_dir = self.repo_root / base_dir
-        self.run_dir = base_dir / f"benchmark_{self.model_name}_seed{getattr(self.config, "seed", 42)}"
+            
+        seed_val = getattr(self.config, 'seed', 42)
+        self.run_dir = base_dir / f"benchmark_{self.model_name}_seed{seed_val}"
+        
+        # Check for overwrite unless resuming or smoke test
+        if self.run_dir.exists() and not getattr(self.args, 'resume', None) and not self.config.smoke_test and not self.config.eval_best_only:
+            raise RuntimeError(f"Output directory {self.run_dir} already exists! Refusing to overwrite.")
+            
         self.checkpoint_dir = self.run_dir / "checkpoints"
         self.log_dir = self.run_dir / "logs"
         self.vis_dir = self.run_dir / "visualizations"
@@ -548,8 +514,10 @@ class BenchmarkTrainer:
             pin_memory=self.config.PIN_MEMORY
         )
         
-        print(f"[INFO] Train samples: {len(train_dataset)}, Val samples: {len(val_dataset)}")
-    
+        print(f"train={len(train_dataset)}")
+        print(f"val={len(val_dataset)}")
+        print(f"test={len(test_dataset)}")
+        print(f"dataset root {self.dataset_root}")
     def _load_checkpoint(self, path: str):
         """Load checkpoint for resuming training."""
         checkpoint = torch.load(path, map_location=self.device, weights_only=False)
@@ -567,7 +535,7 @@ class BenchmarkTrainer:
 
     def evaluate_test_set(self):
         print(f"\n{'='*70}\nEVALUATING ON TEST SET\n{'='*70}")
-        best_path = self.run_dir / 'best.pth'
+        best_path = self.checkpoint_dir / 'best.pth'
         if not best_path.exists():
             raise RuntimeError(f"Cannot find best.pth at {best_path}")
             
@@ -578,19 +546,28 @@ class BenchmarkTrainer:
         test_metrics = self.validate(epoch=0, loader=self.test_loader)
         
         print("\n[TEST RESULTS]")
-        print(f"mIoU (Drivable): {test_metrics['miou']:.4f}")
-        print(f"IoU (Drivable): {test_metrics['iou_1']:.4f}")
-        print(f"F1 (Drivable):  {test_metrics['f1_1']:.4f}")
+        print(f"mIoU: {test_metrics['miou']:.4f}")
+        print(f"IoU (Drivable): {test_metrics['iou_drivable']:.4f}")
+        print(f"F1 (Drivable):  {test_metrics['f1']:.4f}")
+        print(f"Boundary F1:    {test_metrics['boundary_f1']:.4f}")
         
         # Save metrics
         results = {
-            'test_miou': test_metrics['miou'],
-            'test_iou_drivable': test_metrics['iou_1'],
-            'test_f1_drivable': test_metrics['f1_1'],
+            'best_epoch': checkpoint['epoch'],
+            'best_val_miou': checkpoint.get('best_miou', 0.0),
         }
+        results.update(test_metrics)
+        
+        import json, csv
         with open(self.run_dir / "test_results.json", "w") as f:
             json.dump(results, f, indent=4)
-        print(f"Test results saved to {self.run_dir / 'test_results.json'}")
+            
+        with open(self.run_dir / "test_results.csv", "w", newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(results.keys())
+            writer.writerow(results.values())
+            
+        print(f"Test results saved to {self.run_dir / 'test_results.json'} and test_results.csv")
         
     def train(self):
         """Main training loop."""
@@ -629,7 +606,7 @@ class BenchmarkTrainer:
             self.writer.add_scalar('train/loss', train_loss, epoch)
             self.writer.add_scalar('val/miou', val_metrics['miou'], epoch)
             self.writer.add_scalar('val/iou_drivable', val_metrics['iou_drivable'], epoch)
-            self.writer.add_scalar('val/dice', val_metrics['mdice'], epoch)
+            self.writer.add_scalar('val/dice', val_metrics['dice'], epoch)
             self.writer.add_scalar('lr', self.optimizer.param_groups[0]['lr'], epoch)
             
             # Print epoch summary
@@ -637,7 +614,7 @@ class BenchmarkTrainer:
             print(f"\n[TRAIN] Loss: {train_loss:.4f}, LR: {current_lr:.6f}")
             print(f"[VAL] mIoU: {val_metrics['miou']:.4f}, "
                   f"IoU (Drivable): {val_metrics['iou_drivable']:.4f}, "
-                  f"Dice: {val_metrics['mdice']:.4f}")
+                  f"Dice: {val_metrics['dice']:.4f}")
             
             # Save checkpoint
             is_best = val_metrics['miou'] > self.best_miou
@@ -670,44 +647,44 @@ class BenchmarkTrainer:
         
         pbar = tqdm(self.train_loader, desc=f"Train Epoch {epoch}", leave=False)
         
+        self.optimizer.zero_grad()
         for batch_idx, (images, masks) in enumerate(pbar):
-            if self.config.smoke_test and batch_idx >= 2: break
             if self.config.smoke_test and batch_idx >= 4: break
             images = images.to(self.device)
             masks = masks.to(self.device)
-            
-            self.optimizer.zero_grad()
             
             # Forward pass with mixed precision
             if self.config.USE_AMP:
                 with autocast('cuda'):
                     outputs = self.model(images)
-                    # Handle dict output (e.g., FCN)
                     if self.output_key and isinstance(outputs, dict):
                         outputs = outputs[self.output_key]
                     loss = self.criterion(outputs, masks)
                 
-                self.scaler.scale(loss).backward()
+                scaled_loss = loss / self.config.GRAD_ACCUM_STEPS
+                self.scaler.scale(scaled_loss).backward()
                 
-                if self.config.GRAD_CLIP > 0:
-                    self.scaler.unscale_(self.optimizer)
-                    nn.utils.clip_grad_norm_(self.model.parameters(), self.config.GRAD_CLIP)
-                
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
+                if (batch_idx + 1) % self.config.GRAD_ACCUM_STEPS == 0:
+                    if self.config.GRAD_CLIP > 0:
+                        self.scaler.unscale_(self.optimizer)
+                        nn.utils.clip_grad_norm_(self.model.parameters(), self.config.GRAD_CLIP)
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                    self.optimizer.zero_grad()
             else:
                 outputs = self.model(images)
-                # Handle dict output (e.g., FCN)
                 if self.output_key and isinstance(outputs, dict):
                     outputs = outputs[self.output_key]
                 loss = self.criterion(outputs, masks)
                 
-                loss.backward()
+                scaled_loss = loss / self.config.GRAD_ACCUM_STEPS
+                scaled_loss.backward()
                 
-                if self.config.GRAD_CLIP > 0:
-                    nn.utils.clip_grad_norm_(self.model.parameters(), self.config.GRAD_CLIP)
-                
-                self.optimizer.step()
+                if (batch_idx + 1) % self.config.GRAD_ACCUM_STEPS == 0:
+                    if self.config.GRAD_CLIP > 0:
+                        nn.utils.clip_grad_norm_(self.model.parameters(), self.config.GRAD_CLIP)
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
             
             loss_meter.update(loss.item(), images.size(0))
             pbar.set_postfix({'loss': loss_meter.avg})
@@ -722,7 +699,9 @@ class BenchmarkTrainer:
         loader = loader or self.val_loader
         pbar = tqdm(loader, desc="Validating", leave=False)
         self.model.eval()
-        all_metrics = []
+        
+        all_preds = []
+        all_targets = []
         
         for batch_idx, (images, masks) in enumerate(pbar):
             if getattr(self.config, 'smoke_test', False) and batch_idx >= 2: break
@@ -731,21 +710,20 @@ class BenchmarkTrainer:
             
             # Get predictions
             outputs = self.model(images)
-            # Handle dict output (e.g., FCN)
             if self.output_key and isinstance(outputs, dict):
                 outputs = outputs[self.output_key]
             preds = torch.argmax(outputs, dim=1)
             
-            # Compute metrics
-            metrics = compute_metrics(preds.cpu(), masks.cpu(), num_classes=2)
-            all_metrics.append(metrics)
+            all_preds.append(preds.cpu().numpy())
+            all_targets.append(masks.cpu().numpy())
+            
+        all_preds = np.concatenate(all_preds, axis=0)
+        all_targets = np.concatenate(all_targets, axis=0)
         
-        # Average metrics
-        avg_metrics = {}
-        for key in all_metrics[0].keys():
-            avg_metrics[key] = sum(m[key] for m in all_metrics) / len(all_metrics)
+        seg_metrics = compute_metrics(all_preds, all_targets)
+        boundary_metrics = compute_boundary_metrics(all_preds, all_targets)
         
-        return avg_metrics
+        return {**seg_metrics, **boundary_metrics}
     
     def _save_checkpoint(self, epoch: int, is_best: bool = False, filename: str = None):
         """Save checkpoint."""
@@ -798,8 +776,8 @@ def parse_args():
                         help='Learning rate')
 
     # Dataset / outputs
-    parser.add_argument('--dataset-root', type=str, default='CommonDataset',
-                        help='Dataset root (e.g., CommonDataset or carl-dataset)')
+    parser.add_argument('--dataset-root', type=str, default='carl-dataset',
+                        help='Dataset root (e.g., carl-dataset)')
     parser.add_argument('--train-split', type=str, default='train',
                         help='Training split name')
     parser.add_argument('--val-split', type=str, default='val',
