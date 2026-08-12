@@ -104,14 +104,13 @@ class CARLTestDataset(Dataset):
         image = torch.from_numpy(image).permute(2, 0, 1)
         image = self.normalize(image)
         
-        # Load label
-        label = Image.open(self.labels[idx]).convert('L')
-        label = label.resize((self.img_size[1], self.img_size[0]), Image.NEAREST)
-        label = np.array(label)
+        # Load label using new RGB decoder
+        from unified_dataset import decode_carl_rgb_mask
+        label = decode_carl_rgb_mask(self.labels[idx])
+        import cv2
+        label = cv2.resize(label, (self.img_size[1], self.img_size[0]), interpolation=cv2.INTER_NEAREST)
         
-        # Binarize mask (must match training binarization!)
-        label = self._binarize_mask(label)
-        label = torch.from_numpy(label)
+        label = torch.from_numpy(label.astype(np.int64))
         
         return image, label, str(self.images[idx].name)
     

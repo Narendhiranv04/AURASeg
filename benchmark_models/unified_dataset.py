@@ -123,6 +123,33 @@ def binarize_mask(mask: np.ndarray) -> np.ndarray:
         return (mask == uniq.max()).astype(np.uint8)
     return (mask > 0).astype(np.uint8)
 
+def decode_carl_rgb_mask(mask_path: Path) -> np.ndarray:
+    """
+    Decodes the official CARL-D ___fuse.png RGB masks before resizing.
+    ROAD_RGB (17, 163, 74) -> 1
+    BLACK_RGB (0, 0, 0) -> 1
+    BACKGROUND_RGB (15, 16, 65) -> 0
+    Any other color raises ValueError.
+    """
+    mask_img = cv2.imread(str(mask_path), cv2.IMREAD_COLOR)
+    if mask_img is None:
+        raise FileNotFoundError(f"Could not load mask: {mask_path}")
+    mask_img = cv2.cvtColor(mask_img, cv2.COLOR_BGR2RGB)
+
+    decoded = np.zeros(mask_img.shape[:2], dtype=np.uint8)
+    road_mask = (mask_img[:, :, 0] == 17) & (mask_img[:, :, 1] == 163) & (mask_img[:, :, 2] == 74)
+    black_mask = (mask_img[:, :, 0] == 0) & (mask_img[:, :, 1] == 0) & (mask_img[:, :, 2] == 0)
+    bg_mask = (mask_img[:, :, 0] == 15) & (mask_img[:, :, 1] == 16) & (mask_img[:, :, 2] == 65)
+
+    valid_pixels = road_mask | black_mask | bg_mask
+    if not np.all(valid_pixels):
+        invalid_count = np.sum(~valid_pixels)
+        raise ValueError(f"Found {invalid_count} pixels with unexpected colors in {mask_path}")
+
+    decoded[road_mask] = 1
+    decoded[black_mask] = 1
+    
+    return decoded
 
 @dataclass(frozen=True)
 class Normalization:
@@ -217,10 +244,14 @@ class UnifiedDrivableAreaDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         mask_path = find_mask_path(img_path, self.labels_dir)
-        mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
-        if mask is None:
-            raise FileNotFoundError(f"Failed to read mask: {mask_path}")
-        mask = binarize_mask(mask)
+        
+        if "___fuse.png" in mask_path.name:
+            mask = decode_carl_rgb_mask(mask_path)
+        else:
+            mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+            if mask is None:
+                raise FileNotFoundError(f"Failed to read mask: {mask_path}")
+            mask = binarize_mask(mask)
 
         if self._transform is not None:
             transformed = self._transform(image=image, mask=mask)

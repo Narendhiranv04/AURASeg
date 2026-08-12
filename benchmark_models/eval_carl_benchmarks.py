@@ -135,35 +135,15 @@ class CARLTestDataset(Dataset):
         image = torch.from_numpy(image).permute(2, 0, 1)
         image = self.normalize(image)
         
-        # Load label
-        label = Image.open(self.labels[idx]).convert('L')
-        label = label.resize((self.img_size[1], self.img_size[0]), Image.NEAREST)
-        label = np.array(label)
+        # Load label using new RGB decoder
+        from unified_dataset import decode_carl_rgb_mask
+        label = decode_carl_rgb_mask(self.labels[idx])
+        label = cv2.resize(label, (self.img_size[1], self.img_size[0]), interpolation=cv2.INTER_NEAREST)
         
-        # Binarize mask robustly (handles CARL's 21/109 encoding)
-        label = self._binarize_mask(label)
-        label = torch.from_numpy(label)
+        label = torch.from_numpy(label.astype(np.int64))
         
         return image, label, str(self.images[idx].name)
-    
-    def _binarize_mask(self, mask):
-        """
-        Convert grayscale mask to binary {0,1}.
-        Must match unified_dataset.py binarization used during training!
-        
-        For CARL with 3 values (0, 21, 109):
-        - Training used (mask > 0) which maps both 21 and 109 to drivable
-        """
-        uniq = np.unique(mask)
-        if uniq.size == 0:
-            return np.zeros_like(mask, dtype=np.int64)
-        if uniq.size == 1:
-            return (mask > 0).astype(np.int64)
-        if uniq.size == 2:
-            # Two values: max is drivable
-            return (mask == uniq.max()).astype(np.int64)
-        # Three+ values: training used (mask > 0)
-        return (mask > 0).astype(np.int64)
+
 
 
 # =============================================================================
