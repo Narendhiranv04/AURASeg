@@ -400,17 +400,24 @@ def main():
     
     config = Config(args)
     
-    if not args.resume_from and config.OUTPUT_DIR.exists():
-        if not args.smoke_test:
-            raise RuntimeError(f"Experiment directory already exists. Refusing to overwrite: {config.OUTPUT_DIR}")
-        else:
-            shutil.rmtree(config.OUTPUT_DIR)
-            
-    config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    (config.OUTPUT_DIR / "checkpoints").mkdir(exist_ok=True)
-    
-    with open(config.OUTPUT_DIR / "config.json", 'w') as f:
-        json.dump(config.to_dict(), f, indent=4)
+    if args.eval_best_only:
+        if not config.OUTPUT_DIR.exists():
+            raise RuntimeError(f"Experiment directory does not exist for eval-best-only: {config.OUTPUT_DIR}")
+        best_path = config.OUTPUT_DIR / "checkpoints" / "best.pth"
+        if not best_path.exists():
+            raise RuntimeError(f"Cannot find best.pth for eval-best-only: {best_path}")
+    else:
+        if not args.resume_from and config.OUTPUT_DIR.exists():
+            if not args.smoke_test:
+                raise RuntimeError(f"Experiment directory already exists. Refusing to overwrite: {config.OUTPUT_DIR}")
+            else:
+                shutil.rmtree(config.OUTPUT_DIR)
+                
+        config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        (config.OUTPUT_DIR / "checkpoints").mkdir(exist_ok=True)
+        
+        with open(config.OUTPUT_DIR / "config.json", 'w') as f:
+            json.dump(config.to_dict(), f, indent=4)
         
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
