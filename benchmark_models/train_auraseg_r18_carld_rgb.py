@@ -264,6 +264,7 @@ class AURASegTrainer_R18:
         except Exception as e:
             if latest_tmp.exists():
                 latest_tmp.unlink()
+            raise e
         # 2. Save best and last checkpoints
         if is_best:
             torch.save(checkpoint, self.config.OUTPUT_DIR / "checkpoints" / "best.pth")
@@ -313,7 +314,7 @@ class AURASegTrainer_R18:
         total_loss = 0.0
         
         for batch_idx, (images, masks) in enumerate(tqdm(val_loader, desc="Validating")):
-            if self.config.smoke_test and batch_idx >= 3:
+            if self.config.smoke_test and batch_idx >= 2:
                 break
             images, masks = images.to(self.device), masks.to(self.device)
             with autocast(enabled=self.config.USE_AMP):

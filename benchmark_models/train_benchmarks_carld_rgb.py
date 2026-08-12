@@ -71,16 +71,13 @@ class Config:
         self.smoke_test = getattr(args, "smoke_test", False)
         self.eval_best_only = getattr(args, "eval_best_only", False)
         
-        self.BATCH_SIZE = args.batch_size if hasattr(args, "batch_size") else 4
+        self.MICRO_BATCH_SIZE = args.batch_size if hasattr(args, "batch_size") else 4
         self.NUM_WORKERS = args.num_workers if hasattr(args, "num_workers") else 4
         self.EPOCHS = args.epochs if hasattr(args, "epochs") else 50
         if self.smoke_test:
             self.EPOCHS = 2
         
-    # Data paths (relative to AURASeg root)
     DATA_ROOT = Path(__file__).parent.parent
-    IMAGE_DIR = DATA_ROOT / "CommonDataset" / "images"
-    MASK_DIR = DATA_ROOT / "CommonDataset" / "labels"
     
     # Image size
     IMG_SIZE = (384, 640)  # (H, W)
@@ -90,7 +87,9 @@ class Config:
     EPOCHS = 50
     MICRO_BATCH_SIZE = 4
     GRAD_ACCUM_STEPS = 2
-    BATCH_SIZE = 8
+    EFFECTIVE_BATCH_SIZE = 8
+    VAL_BATCH_SIZE = 4
+    TEST_BATCH_SIZE = 4
     LEARNING_RATE = 1e-3
     WEIGHT_DECAY = 1e-4
     MIN_LR = 1e-6
@@ -124,76 +123,7 @@ class Config:
 # Dataset
 # =============================================================================
 
-class DrivableAreaDataset(Dataset):
-    """Dataset for drivable area segmentation."""
-    
-    def __init__(self, image_dir, mask_dir, img_size, split='train', 
-                 transform=True, mean=None, std=None):
-        self.image_dir = Path(image_dir) / split
-        self.mask_dir = Path(mask_dir) / split
-        self.img_size = img_size
-        self.transform_enabled = transform
-        self.mean = mean or Config.MEAN
-        self.std = std or Config.STD
-        
-        # Get all images
-        self.images = sorted(list(self.image_dir.glob('*.jpg')) + 
-                            list(self.image_dir.glob('*.png')))
-        
-        print(f"[{split.upper()}] Found {len(self.images)} images")
-        
-        # Build transforms
-        self.transform = self._build_transforms(split, transform)
-    
-    def _build_transforms(self, split, use_augment):
-        """Build albumentations transform pipeline."""
-        if split == 'train' and use_augment:
-            return A.Compose([
-                A.Resize(height=self.img_size[0], width=self.img_size[1]),
-                A.HorizontalFlip(p=0.5),
-                A.ShiftScaleRotate(
-                    shift_limit=0.1, scale_limit=0.1, rotate_limit=10, p=0.5
-                ),
-                A.RandomBrightnessContrast(
-                    brightness_limit=0.2, contrast_limit=0.2, p=0.3
-                ),
-                A.GaussNoise(var_limit=(10.0, 50.0), p=0.2),
-                A.Normalize(mean=self.mean, std=self.std),
-                ToTensorV2()
-            ])
-        else:
-            return A.Compose([
-                A.Resize(height=self.img_size[0], width=self.img_size[1]),
-                A.Normalize(mean=self.mean, std=self.std),
-                ToTensorV2()
-            ])
-    
-    def __len__(self):
-        return len(self.images)
-    
-    def __getitem__(self, idx):
-        # Load image
-        img_path = self.images[idx]
-        image = cv2.imread(str(img_path))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Load mask
-        mask_name = img_path.stem + '.png'
-        mask_path = self.mask_dir / mask_name
-        if not mask_path.exists():
-            mask_path = self.mask_dir / (img_path.stem + '.jpg')
-        
-        mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
-        
-        # Binarize mask (drivable=1, non-drivable=0)
-        mask = (mask > 127).astype(np.uint8)
-        
-        # Apply transforms
-        transformed = self.transform(image=image, mask=mask)
-        image = transformed['image'].float()
-        mask = transformed['mask'].long()
-        
-        return image, mask
+
 
 
 # =============================================================================
@@ -332,7 +262,7 @@ class BenchmarkTrainer:
         self.repo_root = Path(__file__).parent.parent
         
         # Set random seed
-        set_seed(42)
+        set_seed(self.config.seed)
         
         # Override config with args
         self.config = Config(args)
@@ -386,14 +316,15 @@ class BenchmarkTrainer:
             self._load_checkpoint(args.resume)
     
     def _setup_directories(self):
-        """Create output directories."""
+        # Setup run directory
         base_dir = Path(self.args.runs_dir)
-        if not base_dir.is_absolute():
-            base_dir = self.repo_root / base_dir
+        run_name = f"benchmark_{self.args.model}_seed{self.args.seed}"
+        if getattr(self.args, 'smoke_test', False):
+            run_name += "_smoke"
+        self.run_dir = base_dir / run_name
+        if not self.run_dir.is_absolute():
+            self.run_dir = self.repo_root / self.run_dir
             
-        seed_val = getattr(self.config, 'seed', 42)
-        self.run_dir = base_dir / f"benchmark_{self.model_name}_seed{seed_val}"
-        
         # Check for overwrite unless resuming or smoke test
         if self.run_dir.exists() and not getattr(self.args, 'resume', None) and not self.config.smoke_test and not self.config.eval_best_only:
             raise RuntimeError(f"Output directory {self.run_dir} already exists! Refusing to overwrite.")
@@ -487,20 +418,16 @@ class BenchmarkTrainer:
         
         self.train_loader = DataLoader(
             train_dataset,
-            batch_size=self.config.BATCH_SIZE,
+            batch_size=self.config.MICRO_BATCH_SIZE,
             shuffle=True,
             num_workers=self.config.NUM_WORKERS,
             pin_memory=self.config.PIN_MEMORY,
             drop_last=True
         )
         
-        print(f"Train count = {len(train_dataset)}")
-        print(f"Val count = {len(val_dataset)}")
-        print(f"Test count = {len(test_dataset)}")
-        
         self.val_loader = DataLoader(
             val_dataset,
-            batch_size=self.config.BATCH_SIZE,
+            batch_size=self.config.VAL_BATCH_SIZE,
             shuffle=False,
             num_workers=self.config.NUM_WORKERS,
             pin_memory=self.config.PIN_MEMORY
@@ -508,7 +435,7 @@ class BenchmarkTrainer:
         
         self.test_loader = DataLoader(
             test_dataset,
-            batch_size=self.config.BATCH_SIZE,
+            batch_size=self.config.TEST_BATCH_SIZE,
             shuffle=False,
             num_workers=self.config.NUM_WORKERS,
             pin_memory=self.config.PIN_MEMORY
@@ -580,7 +507,7 @@ class BenchmarkTrainer:
         print(f"Device: {self.device}")
         print(f"Parameters: {self.model_info['params_millions']:.2f}M")
         print(f"Epochs: {self.config.EPOCHS}")
-        print(f"Batch size: {self.config.BATCH_SIZE}")
+        print(f"Batch size: {self.config.EFFECTIVE_BATCH_SIZE} (Micro: {self.config.MICRO_BATCH_SIZE}, Accum: {self.config.GRAD_ACCUM_STEPS})")
         print(f"Learning rate: {self.config.LEARNING_RATE}")
         print(f"Image size: {self.config.IMG_SIZE}")
         print(f"Loss: Focal + Dice")
@@ -770,9 +697,9 @@ def parse_args():
                         help='Evaluate best checkpoint only')
     parser.add_argument('--epochs', type=int, default=50,
                         help='Number of epochs')
-    parser.add_argument('--batch-size', type=int, default=8,
-                        help='Batch size')
-    parser.add_argument('--lr', type=float, default=2e-3,
+    parser.add_argument('--batch-size', type=int, default=4,
+                        help='Micro batch size')
+    parser.add_argument('--lr', type=float, default=1e-3,
                         help='Learning rate')
 
     # Dataset / outputs
