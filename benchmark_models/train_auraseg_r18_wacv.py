@@ -56,7 +56,12 @@ def seed_worker(worker_id):
 
 class Config:
     def __init__(self, args):
-        self.DATA_ROOT = Path(__file__).parent.parent / "CommonDataset"
+        repo_root = Path(__file__).parent.parent
+        self.dataset_type = getattr(args, 'dataset', 'mix')
+        if self.dataset_type == 'carl-d':
+            self.DATA_ROOT = repo_root / "carl-dataset"
+        else:
+            self.DATA_ROOT = repo_root / "CommonDataset"
         self.NUM_CLASSES = 2
         self.IMG_SIZE = (384, 640)
         self.EPOCHS = 50
@@ -117,6 +122,7 @@ class Config:
             
         self.OUTPUT_DIR = self.output_root_path / self.run_name
         self.resume_from = getattr(args, 'resume_from', None)
+        self.smoke_test = getattr(args, 'smoke_test', False)
         
     def to_dict(self):
         import subprocess
@@ -333,6 +339,43 @@ class AURASegTrainer_R18:
         boundary_metrics = compute_boundary_metrics(all_preds, all_targets)
         return {'loss': total_loss / len(val_loader), **seg_metrics, **boundary_metrics}
 
+
+    def evaluate_test_set(self, test_loader: DataLoader):
+        import csv
+        print(f"\n{'='*70}\nEVALUATING ON TEST SET\n{'='*70}")
+        best_path = self.config.OUTPUT_DIR / "checkpoints" / "best.pth"
+        if not best_path.exists():
+            raise RuntimeError(f"Cannot find best.pth at {best_path}")
+
+        checkpoint = torch.load(best_path, map_location=self.device, weights_only=False)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        print(f"Loaded best.pth from Epoch {checkpoint['epoch']} (Val mIoU: {checkpoint.get('best_miou', 0.0):.4f})")
+
+        test_metrics = self.validate(test_loader)
+
+        results_json = {
+            'checkpoint_epoch': checkpoint['epoch'],
+            'val_best_miou': checkpoint.get('best_miou', 0.0),
+            'metrics': {k: float(v) for k, v in test_metrics.items()}
+        }
+
+        json_path = self.config.OUTPUT_DIR / "test_results.json"
+        with open(json_path, 'w') as f:
+            json.dump(results_json, f, indent=4)
+
+        csv_path = self.config.OUTPUT_DIR / "test_results.csv"
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['metric', 'value'])
+            for k, v in test_metrics.items():
+                writer.writerow([k, v])
+
+        print("\n[TEST SET METRICS]")
+        for k, v in test_metrics.items():
+            print(f"{k:24s}: {v:.6f}")
+        print(f"Results saved to {json_path} and {csv_path}")
+        return test_metrics
+
     def train(self, train_loader: DataLoader, val_loader: DataLoader):
         print(f"\n{'='*70}\nTRAINING: {self.config.run_name}\n{'='*70}")
         
@@ -360,6 +403,9 @@ class AURASegTrainer_R18:
 
 def main():
     parser = argparse.ArgumentParser(description='Train AURASeg WACV ResNet-18 Ablations')
+    parser.add_argument('--dataset', type=str, choices=['mix', 'carl-d'], default='mix', help='Dataset to train on')
+    parser.add_argument('--eval-best-only', action='store_true', default=False, help='Only evaluate best checkpoint on test set')
+    parser.add_argument('--smoke-test', action='store_true', default=False)
     parser.add_argument('--fusion-type', type=str, choices=['mul', 'add', 'concat'], default='mul')
     parser.add_argument('--attention-mode', type=str, choices=['full', 'none', 'se', 'spatial'], default='full')
     
@@ -383,8 +429,19 @@ def main():
     config = Config(args)
     
     config_path = config.OUTPUT_DIR / "config.json"
-    if config_path.exists() and not getattr(args, 'resume_from', None):
-        raise RuntimeError(f"Experiment directory already exists. Refusing to overwrite:\n{config.OUTPUT_DIR}")
+    if args.eval_best_only:
+        if not config.OUTPUT_DIR.exists():
+            raise RuntimeError(f"Experiment directory does not exist for eval-best-only: {config.OUTPUT_DIR}")
+        best_path = config.OUTPUT_DIR / "checkpoints" / "best.pth"
+        if not best_path.exists():
+            raise RuntimeError(f"Cannot find best.pth for eval-best-only: {best_path}")
+    else:
+        if config_path.exists() and not getattr(args, 'resume_from', None):
+            if not getattr(args, 'smoke_test', False):
+                raise RuntimeError(f"Experiment directory already exists. Refusing to overwrite: {config.OUTPUT_DIR}")
+            else:
+                print("SMOKE TEST: Overwriting directory.")
+
         
     config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (config.OUTPUT_DIR / "checkpoints").mkdir(exist_ok=True)
@@ -418,13 +475,16 @@ def main():
         aug_params=config.aug_params
     )
     
-    train_loader = DataLoader(
-        train_dataset, batch_size=config.MICRO_BATCH_SIZE,
-        shuffle=True, num_workers=config.NUM_WORKERS,
-        pin_memory=config.PIN_MEMORY, drop_last=True,
-        worker_init_fn=seed_worker, generator=g
-    )
-    
+    if not args.eval_best_only:
+        train_loader = DataLoader(
+            train_dataset, batch_size=config.MICRO_BATCH_SIZE,
+            shuffle=True, num_workers=config.NUM_WORKERS,
+            pin_memory=config.PIN_MEMORY, drop_last=True,
+            worker_init_fn=seed_worker, generator=g
+        )
+    else:
+        train_loader = None
+        
     val_loader = DataLoader(
         val_dataset, batch_size=config.VAL_BATCH_SIZE,
         shuffle=False, num_workers=config.NUM_WORKERS,
@@ -432,9 +492,37 @@ def main():
         worker_init_fn=seed_worker
     )
     
+    test_loader = None
+    if config.dataset_type == 'carl-d':
+        test_dataset = UnifiedDrivableAreaDataset(
+            dataset_root=config.DATA_ROOT, split='test',
+            img_size=config.IMG_SIZE, transform=False,
+            normalization=normalization, return_names=False,
+            aug_params=config.aug_params
+        )
+        test_loader = DataLoader(
+            test_dataset, batch_size=config.VAL_BATCH_SIZE,
+            shuffle=False, num_workers=config.NUM_WORKERS,
+            pin_memory=config.PIN_MEMORY, drop_last=False,
+            worker_init_fn=seed_worker
+        )
+
     # Train
     trainer = AURASegTrainer_R18(config, device)
+    
+    if args.eval_best_only:
+        if test_loader is not None:
+            trainer.evaluate_test_set(test_loader)
+        else:
+            print("No test split available for this dataset to evaluate.")
+        return
+        
+    if getattr(args, 'smoke_test', False):
+        config.EPOCHS = 2
     trainer.train(train_loader, val_loader)
+    
+    if test_loader is not None:
+        trainer.evaluate_test_set(test_loader)
 
 if __name__ == "__main__":
     main()

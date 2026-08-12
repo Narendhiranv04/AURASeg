@@ -113,24 +113,6 @@ class CARLTestDataset(Dataset):
         label = torch.from_numpy(label.astype(np.int64))
         
         return image, label, str(self.images[idx].name)
-    
-    def _binarize_mask(self, mask):
-        """
-        Convert grayscale mask to binary {0,1}.
-        Must match unified_dataset.py binarization used during training!
-        
-        For CARL with 3 values (0, 21, 109):
-        - Training used (mask > 0) which maps both 21 and 109 to drivable
-        """
-        uniq = np.unique(mask)
-        if uniq.size == 0:
-            return np.zeros_like(mask, dtype=np.int64)
-        if uniq.size == 1:
-            return (mask > 0).astype(np.int64)
-        if uniq.size == 2:
-            return (mask == uniq.max()).astype(np.int64)
-        # Three+ values: training used (mask > 0)
-        return (mask > 0).astype(np.int64)
 
 
 # =============================================================================

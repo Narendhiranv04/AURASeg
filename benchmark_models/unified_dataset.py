@@ -20,7 +20,10 @@ Mask mapping:
   - CommonDataset: <image_stem>.png (or .jpg)
   - CARL-D: <image_filename>___fuse.png
 
-Mask binarization is robust to arbitrary 2-value encodings (e.g., 21/109).
+Mask binarization:
+  - CommonDataset: Uses grayscale binarization robust to arbitrary 2-value encodings.
+  - CARL-D: Uses exact RGB decoding matching official implementation conventions.
+
 """
 
 from __future__ import annotations
