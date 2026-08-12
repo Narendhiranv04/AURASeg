@@ -1,0 +1,27 @@
+{
+    "checkpoint_path": "/media/naren/Windows/Users/naren/Documents/AURASeg/runs_wacv_new/r18_mul_full_sobel_gate_seed42/checkpoints/best.pth",
+    "model_configuration": {
+        "fusion_type": "mul",
+        "attention_mode": "full",
+        "use_sobel": true,
+        "use_gate": true,
+        "simple_boundary_head": false
+    },
+    "dataset_path": "/media/naren/Windows/Users/naren/Documents/AURASeg/CommonDataset",
+    "split": "val",
+    "resolution": [
+        384,
+        640
+    ],
+    "boundary_gradient_kernel": "3x3",
+    "k_values": [
+        1,
+        2,
+        3
+    ],
+    "timestamp": "2026-08-12T06:01:15.770607",
+    "git_commit": "43a1ca7db165b3acd2f079dc5551ec9e6cc7ac99",
+    "num_validation_images": 367,
+    "num_validation_batches": 92,
+    "batch_size": 4
+}
