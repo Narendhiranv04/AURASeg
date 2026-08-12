@@ -71,6 +71,7 @@ class Config:
         
         self.seed = args.seed
         self.smoke_test = args.smoke_test
+        self.eval_best_only = getattr(args, 'eval_best_only', False)
         
         if self.smoke_test:
             self.run_name = "_smoke"
@@ -305,6 +306,41 @@ class FBRNetTrainer:
         boundary_metrics = compute_boundary_metrics(all_preds, all_targets, k=2)
         return {**seg_metrics, **boundary_metrics}
 
+    def evaluate_test_set(self, test_loader: DataLoader):
+        print(f"\n{'='*70}\nEVALUATING ON TEST SET\n{'='*70}")
+        best_path = self.config.OUTPUT_DIR / "checkpoints" / "best.pth"
+        if not best_path.exists():
+            raise RuntimeError(f"Cannot find best.pth at {best_path}")
+            
+        checkpoint = torch.load(best_path, map_location=self.device, weights_only=False)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        print(f"Loaded best.pth from Epoch {checkpoint['epoch']} (Val mIoU: {checkpoint.get('best_miou', 0.0):.4f})")
+        
+        test_metrics = self.validate(test_loader)
+        
+        results_json = {
+            'checkpoint_epoch': checkpoint['epoch'],
+            'val_best_miou': checkpoint.get('best_miou', 0.0),
+            'metrics': {k: float(v) for k, v in test_metrics.items()}
+        }
+        
+        json_path = self.config.OUTPUT_DIR / "test_results.json"
+        with open(json_path, 'w') as f:
+            json.dump(results_json, f, indent=4)
+            
+        csv_path = self.config.OUTPUT_DIR / "test_results.csv"
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['metric', 'value'])
+            for k, v in test_metrics.items():
+                writer.writerow([k, v])
+                
+        print("\n[TEST SET METRICS]")
+        for k, v in test_metrics.items():
+            print(f"{k:24s}: {v:.6f}")
+        print(f"Results saved to {json_path} and {csv_path}")
+        return test_metrics
+
     def train(self, train_loader: DataLoader, val_loader: DataLoader):
         print(f"\n{'='*70}\nTRAINING: {self.config.run_name}\n{'='*70}")
         
@@ -357,6 +393,7 @@ def main():
     parser.add_argument('--output-root', type=str, default='')
     parser.add_argument('--resume-from', type=str, default=None)
     parser.add_argument('--smoke-test', action='store_true', default=False)
+    parser.add_argument('--eval-best-only', action='store_true', default=False)
     args = parser.parse_args()
     
     set_seed(args.seed)
@@ -389,29 +426,30 @@ def main():
     g = torch.Generator()
     g.manual_seed(args.seed)
     
-    train_dataset = UnifiedDrivableAreaDataset(
-        dataset_root=config.DATA_ROOT, split='train',
-        img_size=config.IMG_SIZE, transform=True,
-        normalization=normalization, return_names=False,
-        aug_params=aug_params
-    )
-    
+    if not args.eval_best_only:
+        train_dataset = UnifiedDrivableAreaDataset(
+            dataset_root=config.DATA_ROOT, split='train',
+            img_size=config.IMG_SIZE, transform=True,
+            normalization=normalization, return_names=False,
+            aug_params=aug_params
+        )
+        print(f"Train Samples: {len(train_dataset)}")
+        train_loader = DataLoader(
+            train_dataset, batch_size=config.MICRO_BATCH_SIZE,
+            shuffle=True, num_workers=config.NUM_WORKERS,
+            pin_memory=config.PIN_MEMORY, drop_last=True,
+            worker_init_fn=seed_worker, generator=g
+        )
+    else:
+        train_loader = None
+        
     val_dataset = UnifiedDrivableAreaDataset(
         dataset_root=config.DATA_ROOT, split='val',
         img_size=config.IMG_SIZE, transform=False,
         normalization=normalization, return_names=False,
         aug_params=aug_params
     )
-    
-    print(f"MIX Train Samples: {len(train_dataset)}")
-    print(f"MIX Val Samples: {len(val_dataset)}")
-    
-    train_loader = DataLoader(
-        train_dataset, batch_size=config.MICRO_BATCH_SIZE,
-        shuffle=True, num_workers=config.NUM_WORKERS,
-        pin_memory=config.PIN_MEMORY, drop_last=True,
-        worker_init_fn=seed_worker, generator=g
-    )
+    print(f"Val Samples: {len(val_dataset)}")
     
     val_loader = DataLoader(
         val_dataset, batch_size=config.VAL_BATCH_SIZE,
@@ -420,8 +458,35 @@ def main():
         worker_init_fn=seed_worker
     )
     
+    test_loader = None
+    if config.dataset_type == 'carl-d':
+        test_dataset = UnifiedDrivableAreaDataset(
+            dataset_root=config.DATA_ROOT, split='test',
+            img_size=config.IMG_SIZE, transform=False,
+            normalization=normalization, return_names=False,
+            aug_params=aug_params
+        )
+        print(f"Test Samples: {len(test_dataset)}")
+        test_loader = DataLoader(
+            test_dataset, batch_size=config.VAL_BATCH_SIZE,
+            shuffle=False, num_workers=config.NUM_WORKERS,
+            pin_memory=config.PIN_MEMORY, drop_last=False,
+            worker_init_fn=seed_worker
+        )
+    
     trainer = FBRNetTrainer(config, device)
+    
+    if args.eval_best_only:
+        if test_loader is not None:
+            trainer.evaluate_test_set(test_loader)
+        else:
+            print("No test split available for this dataset to evaluate.")
+        return
+        
     trainer.train(train_loader, val_loader)
+    
+    if test_loader is not None:
+        trainer.evaluate_test_set(test_loader)
 
 if __name__ == "__main__":
     main()
