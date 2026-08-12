@@ -316,18 +316,28 @@ class BoundaryDecoder(nn.Module):
 
 class RBRMModule(nn.Module):
     def __init__(self, in_channels: int = 256, edge_channels: int = 64, 
-                 use_sobel: bool = True, use_gate: bool = True):
+                 use_sobel: bool = True, use_gate: bool = True,
+                 simple_boundary_head: bool = False):
         super().__init__()
         self.use_gate = use_gate
+        self.simple_boundary_head = simple_boundary_head
         
         self.boundary_head = BoundaryDetectionHead(in_channels, edge_channels, use_sobel=use_sobel)
-        self.boundary_encoder = BoundaryEncoder(edge_channels)
-        self.boundary_decoder = BoundaryDecoder(edge_channels)
         
-        self.boundary_proj = nn.Sequential(
-            ConvBNAct(edge_channels, in_channels, kernel_size=1),
-            nn.Conv2d(in_channels, in_channels, 1, bias=False)
-        )
+        if self.simple_boundary_head:
+            self.simple_convs = nn.Sequential(
+                ConvBNAct(edge_channels, edge_channels, kernel_size=3, activation='relu'),
+                ConvBNAct(edge_channels, edge_channels, kernel_size=3, activation='relu')
+            )
+            self.boundary_proj = nn.Conv2d(edge_channels, in_channels, 1)
+        else:
+            self.boundary_encoder = BoundaryEncoder(edge_channels)
+            self.boundary_decoder = BoundaryDecoder(edge_channels)
+            
+            self.boundary_proj = nn.Sequential(
+                ConvBNAct(edge_channels, in_channels, kernel_size=1),
+                nn.Conv2d(in_channels, in_channels, 1, bias=False)
+            )
         
         if self.use_gate:
             self.fusion_gate = nn.Sequential(
@@ -340,8 +350,12 @@ class RBRMModule(nn.Module):
     
     def forward(self, x: torch.Tensor, return_boundary: bool = False) -> dict:
         edge_features = self.boundary_head(x)
-        s1, s2, s3 = self.boundary_encoder(edge_features)
-        boundary_features = self.boundary_decoder(s3, s2, s1, edge_features)
+        
+        if self.simple_boundary_head:
+            boundary_features = self.simple_convs(edge_features)
+        else:
+            s1, s2, s3 = self.boundary_encoder(edge_features)
+            boundary_features = self.boundary_decoder(s3, s2, s1, edge_features)
         
         boundary_proj = self.boundary_proj(boundary_features)
         
@@ -374,7 +388,8 @@ class AURASeg_R18_WACV(nn.Module):
                  fusion_type: str = 'mul',
                  attention_mode: str = 'full',
                  use_sobel: bool = True,
-                 use_gate: bool = True):
+                 use_gate: bool = True,
+                 simple_boundary_head: bool = False):
         super().__init__()
         
         self.num_classes = num_classes
@@ -410,7 +425,8 @@ class AURASeg_R18_WACV(nn.Module):
             in_channels=decoder_channels,
             edge_channels=64,
             use_sobel=use_sobel,
-            use_gate=use_gate
+            use_gate=use_gate,
+            simple_boundary_head=simple_boundary_head
         )
         
         self.seg_head = nn.Sequential(

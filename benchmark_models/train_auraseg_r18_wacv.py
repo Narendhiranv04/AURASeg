@@ -16,6 +16,7 @@ import argparse
 import time
 import json
 import random
+import shutil
 from pathlib import Path
 from datetime import datetime
 
@@ -59,7 +60,10 @@ class Config:
         self.NUM_CLASSES = 2
         self.IMG_SIZE = (384, 640)
         self.EPOCHS = 50
-        self.BATCH_SIZE = 8
+        self.MICRO_BATCH_SIZE = 4
+        self.GRAD_ACCUM_STEPS = 2
+        self.VAL_BATCH_SIZE = 4
+        self.EFFECTIVE_BATCH_SIZE = self.MICRO_BATCH_SIZE * self.GRAD_ACCUM_STEPS
         self.LR_ENCODER = 1e-4
         self.LR_DECODER = 1e-3
         self.WEIGHT_DECAY = 0.01
@@ -79,6 +83,7 @@ class Config:
         self.attention_mode = args.attention_mode
         self.use_sobel = args.use_sobel
         self.use_gate = args.use_gate
+        self.simple_boundary_head = getattr(args, 'simple_boundary_head', False)
         self.seed = args.seed
         
         # WACV Augmentation Parameters
@@ -98,10 +103,20 @@ class Config:
         # Name formulation
         sobel_str = "sobel" if self.use_sobel else "nosobel"
         gate_str = "gate" if self.use_gate else "nogate"
-        self.run_name = f"r18_{self.fusion_type}_{self.attention_mode}_{sobel_str}_{gate_str}_seed{self.seed}"
+        sbh_str = "simplebnd" if self.simple_boundary_head else ""
+        self.run_name = f"r18_{self.fusion_type}_{self.attention_mode}_{sobel_str}_{gate_str}"
+        if sbh_str:
+            self.run_name += f"_{sbh_str}"
+        self.run_name += f"_seed{self.seed}"
         
         repo_root = Path(__file__).parent.parent
-        self.OUTPUT_DIR = repo_root / "runs_wacv_new" / self.run_name
+        if hasattr(args, 'output_root') and args.output_root:
+            self.output_root_path = Path(args.output_root)
+        else:
+            self.output_root_path = repo_root / "runs_wacv_new"
+            
+        self.OUTPUT_DIR = self.output_root_path / self.run_name
+        self.resume_from = getattr(args, 'resume_from', None)
         
     def to_dict(self):
         import subprocess
@@ -116,11 +131,14 @@ class Config:
             'attention_mode': self.attention_mode,
             'use_sobel': self.use_sobel,
             'use_gate': self.use_gate,
+            'simple_boundary_head': self.simple_boundary_head,
             'seed': self.seed,
             'dataset': str(self.DATA_ROOT),
             'input_resolution': self.IMG_SIZE,
             'optimizer': 'AdamW',
             'learning_rates': {'encoder': self.LR_ENCODER, 'decoder': self.LR_DECODER},
+            'weight_decay': self.WEIGHT_DECAY,
+            'AMP': self.USE_AMP,
             'loss_configuration': {
                 'focal_alpha': 0.25,
                 'focal_gamma': 2.0,
@@ -135,9 +153,23 @@ class Config:
                 'number_of_aux_stages': 4
             },
             'augmentation': self.aug_params,
+            'normalization': {
+                'mean': self.MEAN,
+                'std': self.STD
+            },
             'scheduler': 'CosineAnnealingLR',
+            'scheduler_eta_min': 1e-6,
             'epochs': self.EPOCHS,
-            'batch_size': self.BATCH_SIZE,
+            'micro_batch_size': self.MICRO_BATCH_SIZE,
+            'gradient_accumulation_steps': self.GRAD_ACCUM_STEPS,
+            'effective_batch_size': self.EFFECTIVE_BATCH_SIZE,
+            'val_batch_size': self.VAL_BATCH_SIZE,
+            'num_workers': self.NUM_WORKERS,
+            'pin_memory': self.PIN_MEMORY,
+            'dataloader_drop_last': {'train': True, 'val': False},
+            'early_stopping_metric': 'mIoU',
+            'patience': self.PATIENCE,
+            'min_delta': self.MIN_DELTA,
             'timestamp': datetime.now().isoformat(),
             'git_commit': git_commit
         }
@@ -154,7 +186,8 @@ class AURASegTrainer_R18:
             fusion_type=config.fusion_type,
             attention_mode=config.attention_mode,
             use_sobel=config.use_sobel,
-            use_gate=config.use_gate
+            use_gate=config.use_gate,
+            simple_boundary_head=config.simple_boundary_head
         ).to(device)
         
         self.criterion = WACVCombinedLoss(
@@ -181,8 +214,28 @@ class AURASegTrainer_R18:
         self.scaler = GradScaler(enabled=config.USE_AMP)
         self.best_miou = 0.0
         self.epochs_without_improvement = 0
+        self.start_epoch = 1
+        
+        if config.resume_from:
+            print(f"Resuming from {config.resume_from}...")
+            checkpoint = torch.load(config.resume_from, map_location=device, weights_only=False)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            if self.config.USE_AMP and checkpoint.get('scaler_state_dict'):
+                self.scaler.load_state_dict(checkpoint['scaler_state_dict'])
+            self.start_epoch = checkpoint['epoch'] + 1
+            self.best_miou = checkpoint.get('best_miou', 0.0)
+            self.epochs_without_improvement = checkpoint.get('epochs_without_improvement', 0)
+            print(f"Resumed at epoch {self.start_epoch} (Best mIoU: {self.best_miou:.4f})")
 
     def save_checkpoint(self, epoch: int, metrics: dict, is_best: bool = False):
+        # 1. Check free space (require 500MB safety margin)
+        usage = shutil.disk_usage(self.config.OUTPUT_DIR)
+        min_required_bytes = 500 * 1024 * 1024
+        if usage.free < min_required_bytes:
+            raise RuntimeError(f"Insufficient disk space to safely write checkpoint. Required: 500MB, Free: {usage.free / (1024**2):.2f}MB")
+            
         checkpoint = {
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
@@ -193,35 +246,65 @@ class AURASegTrainer_R18:
             'epochs_without_improvement': self.epochs_without_improvement,
             'metrics': metrics
         }
+        
         latest_path = self.config.OUTPUT_DIR / "checkpoints" / "latest.pth"
-        torch.save(checkpoint, latest_path)
+        latest_tmp = latest_path.with_suffix(".pth.tmp")
+        
+        # 2. Atomic save for latest.pth
+        try:
+            torch.save(checkpoint, latest_tmp)
+            os.replace(latest_tmp, latest_path)
+        except Exception as e:
+            if latest_tmp.exists():
+                latest_tmp.unlink()
+            raise RuntimeError(f"Failed to save latest checkpoint: {e}")
+            
+        # 3. Duplicate serialization avoidance for best.pth
         if is_best:
             best_path = self.config.OUTPUT_DIR / "checkpoints" / "best.pth"
-            torch.save(checkpoint, best_path)
+            best_tmp = best_path.with_suffix(".pth.tmp")
+            try:
+                shutil.copy2(latest_path, best_tmp)
+                os.replace(best_tmp, best_path)
+            except Exception as e:
+                if best_tmp.exists():
+                    best_tmp.unlink()
+                raise RuntimeError(f"Failed to copy to best checkpoint: {e}")
 
     def train_epoch(self, train_loader: DataLoader, epoch: int) -> dict:
         self.model.train()
         total_loss = total_seg = total_bnd = total_aux = 0.0
         pbar = tqdm(train_loader, desc=f"Train Epoch {epoch}")
         
-        for images, masks in pbar:
+        self.optimizer.zero_grad()
+        for i, (images, masks) in enumerate(pbar):
             images, masks = images.to(self.device), masks.to(self.device)
             
-            self.optimizer.zero_grad()
             with autocast(enabled=self.config.USE_AMP):
                 outputs = self.model(images, return_aux=True, return_boundary=True)
                 losses = self.criterion(outputs, masks)
             
-            self.scaler.scale(losses['total']).backward()
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
+            scaled_loss = losses['total'] / self.config.GRAD_ACCUM_STEPS
+            self.scaler.scale(scaled_loss).backward()
             
+            if (i + 1) % self.config.GRAD_ACCUM_STEPS == 0:
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                self.optimizer.zero_grad()
+            
+            # Log ORIGINAL (un-divided) loss values
             total_loss += losses['total'].item()
             total_seg += losses['seg'].item()
             total_bnd += losses['boundary'].item()
             total_aux += losses['aux'].item()
             
             pbar.set_postfix({'loss': f"{losses['total'].item():.4f}"})
+            
+        # Handle remaining gradients if drop_last=False
+        if len(train_loader) % self.config.GRAD_ACCUM_STEPS != 0:
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+            self.optimizer.zero_grad()
             
         n = len(train_loader)
         return {'loss': total_loss / n, 'seg': total_seg / n, 'bnd': total_bnd / n, 'aux': total_aux / n}
@@ -253,7 +336,7 @@ class AURASegTrainer_R18:
     def train(self, train_loader: DataLoader, val_loader: DataLoader):
         print(f"\n{'='*70}\nTRAINING: {self.config.run_name}\n{'='*70}")
         
-        for epoch in range(1, self.config.EPOCHS + 1):
+        for epoch in range(self.start_epoch, self.config.EPOCHS + 1):
             train_metrics = self.train_epoch(train_loader, epoch)
             val_metrics = self.validate(val_loader)
             
@@ -286,8 +369,11 @@ def main():
     parser.add_argument('--use-gate', action='store_true', default=True, help='Enable localized gate (Default: True)')
     parser.add_argument('--no-gate', action='store_false', dest='use_gate', help='Disable gate (direct residual)')
     
+    parser.add_argument('--simple-boundary-head', action='store_true', default=False, help='Use simple boundary head instead of RBRM encoder-decoder')
+    
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
-    parser.add_argument('--resume', action='store_true', help='Explicitly resume an existing run (overrides protection)')
+    parser.add_argument('--output-root', type=str, default='', help='Root directory for output (Default: runs_wacv_new)')
+    parser.add_argument('--resume-from', type=str, default=None, help='Path to checkpoint to resume from (bypass overwrite protection)')
     args = parser.parse_args()
     
     # 1. Set deterministic seed
@@ -297,7 +383,7 @@ def main():
     config = Config(args)
     
     config_path = config.OUTPUT_DIR / "config.json"
-    if config_path.exists() and not args.resume:
+    if config_path.exists() and not getattr(args, 'resume_from', None):
         raise RuntimeError(f"Experiment directory already exists. Refusing to overwrite:\n{config.OUTPUT_DIR}")
         
     config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -333,14 +419,14 @@ def main():
     )
     
     train_loader = DataLoader(
-        train_dataset, batch_size=config.BATCH_SIZE,
+        train_dataset, batch_size=config.MICRO_BATCH_SIZE,
         shuffle=True, num_workers=config.NUM_WORKERS,
         pin_memory=config.PIN_MEMORY, drop_last=True,
         worker_init_fn=seed_worker, generator=g
     )
     
     val_loader = DataLoader(
-        val_dataset, batch_size=config.BATCH_SIZE,
+        val_dataset, batch_size=config.VAL_BATCH_SIZE,
         shuffle=False, num_workers=config.NUM_WORKERS,
         pin_memory=config.PIN_MEMORY, drop_last=False,
         worker_init_fn=seed_worker

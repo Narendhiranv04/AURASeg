@@ -39,7 +39,7 @@ def compute_metrics(preds: np.ndarray, targets: np.ndarray, num_classes: int = 2
     
     return metrics
 
-def compute_boundary_metrics(preds: np.ndarray, targets: np.ndarray) -> dict:
+def compute_boundary_metrics(preds: np.ndarray, targets: np.ndarray, k: int = 2) -> dict:
     kernel = np.ones((3, 3), np.uint8)
     
     boundary_ious = []
@@ -54,8 +54,8 @@ def compute_boundary_metrics(preds: np.ndarray, targets: np.ndarray) -> dict:
         pred_boundary = cv2.morphologyEx(pred_binary, cv2.MORPH_GRADIENT, kernel)
         target_boundary = cv2.morphologyEx(target_binary, cv2.MORPH_GRADIENT, kernel)
         
-        pred_boundary = cv2.dilate(pred_boundary, kernel, iterations=2)
-        target_boundary = cv2.dilate(target_boundary, kernel, iterations=2)
+        pred_boundary = cv2.dilate(pred_boundary, kernel, iterations=k)
+        target_boundary = cv2.dilate(target_boundary, kernel, iterations=k)
         
         tp = np.sum((pred_boundary > 0) & (target_boundary > 0))
         fp = np.sum((pred_boundary > 0) & (target_boundary == 0))
