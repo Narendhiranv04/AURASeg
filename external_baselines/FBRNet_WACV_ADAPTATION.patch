@@ -1,3 +1,13 @@
+diff --git a/lib/models/__init__.py b/lib/models/__init__.py
+index bee2082..1ad8421 100644
+--- a/lib/models/__init__.py
++++ b/lib/models/__init__.py
+@@ -1,4 +1,4 @@
+-from .model import model_v0
++from .model import res18PaNew7Brm as model_v0
+ 
+ 
+ model_factory = {
 diff --git a/lib/models/model.py b/lib/models/model.py
 index 6a8c0db..e6bd2b8 100644
 --- a/lib/models/model.py

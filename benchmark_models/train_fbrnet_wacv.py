@@ -3,6 +3,7 @@ import sys
 import argparse
 import time
 import json
+import csv
 import random
 import shutil
 from pathlib import Path
@@ -108,6 +109,11 @@ class Config:
             'scheduler': 'CosineAnnealingLR',
             'scheduler_eta_min': 1e-6,
             'epochs': self.EPOCHS,
+            'min_delta': self.MIN_DELTA,
+            'num_workers': self.NUM_WORKERS,
+            'train_drop_last': True,
+            'val_drop_last': False,
+            'boundary_tolerance_k': 2,
             'micro_batch_size': self.MICRO_BATCH_SIZE,
             'gradient_accumulation_steps': self.GRAD_ACCUM_STEPS,
             'effective_batch_size': self.EFFECTIVE_BATCH_SIZE,
@@ -120,6 +126,7 @@ class Config:
             'environment': {
                 'python': sys.version.split()[0],
                 'torch': torch.__version__,
+                'torchvision': __import__('torchvision').__version__,
                 'cuda': torch.version.cuda,
                 'gpu': torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'None'
             }
@@ -170,6 +177,16 @@ class FBRNetTrainer:
             self.best_miou = checkpoint.get('best_miou', 0.0)
             self.epochs_without_improvement = checkpoint.get('epochs_without_improvement', 0)
             print(f"Resumed at epoch {self.start_epoch} (Best mIoU: {self.best_miou:.4f})")
+            
+        self.csv_path = config.OUTPUT_DIR / "training_log.csv"
+        if not self.csv_path.exists():
+            with open(self.csv_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    'epoch', 'train_loss', 'val_miou', 'val_iou_drivable', 
+                    'val_f1', 'val_boundary_iou', 'val_boundary_f1', 
+                    'encoder_lr', 'decoder_lr', 'is_best'
+                ])
 
     def save_checkpoint(self, epoch: int, metrics: dict, is_best: bool = False):
         usage = shutil.disk_usage(self.config.OUTPUT_DIR)
@@ -311,6 +328,23 @@ class FBRNetTrainer:
             
             if self.epochs_without_improvement >= self.config.PATIENCE:
                 print(f"Early stopping triggered at epoch {epoch}")
+                
+            with open(self.csv_path, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    epoch,
+                    f"{train_metrics['loss']:.6f}",
+                    f"{val_metrics['miou']:.6f}",
+                    f"{val_metrics['iou_drivable']:.6f}",
+                    f"{val_metrics['f1']:.6f}",
+                    f"{val_metrics.get('boundary_iou', 0.0):.6f}",
+                    f"{val_metrics.get('boundary_f1', 0.0):.6f}",
+                    f"{self.optimizer.param_groups[0]['lr']:.2e}",
+                    f"{self.optimizer.param_groups[1]['lr']:.2e}",
+                    is_best
+                ])
+                
+            if self.epochs_without_improvement >= self.config.PATIENCE:
                 break
                 
             if self.config.smoke_test:
