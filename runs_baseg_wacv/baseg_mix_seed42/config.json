@@ -1,0 +1,67 @@
+{
+    "model": "BASeg-R101",
+    "official_repo": "https://github.com/YangParky/BASeg",
+    "official_commit": "e88e958fa5f44a26995ec1dd9949291c89449d8d",
+    "official_paper": "BASeg: Boundary Aware Semantic Segmentation for Autonomous Driving, Neural Networks, 2023",
+    "official_backbone": "Dilated ResNet-101 (OS=8, multi-grid [1, 1, 1])",
+    "total_parameters": 78461479,
+    "trainable_parameters": 78461479,
+    "adaptation": "Binary drivable segmentation (num_classes=2). Preserved native ASPP, BRM, CAM, AGB, and Canny stream.",
+    "dataset": "/media/naren/Windows/Users/naren/Documents/AURASeg/CommonDataset",
+    "dataset_type": "mix",
+    "input_resolution": [
+        384,
+        640
+    ],
+    "optimizer": "AdamW",
+    "learning_rates": {
+        "encoder": 0.0001,
+        "decoder": 0.001
+    },
+    "weight_decay": 0.01,
+    "AMP": true,
+    "loss_formulation": {
+        "semantic_loss": "ImageBasedCrossEntropyLoss2d (weight=1.0)",
+        "auxiliary_loss": "nn.CrossEntropyLoss on stage 3 (weight=0.4)",
+        "boundary_loss": "bce2d with inverse pos/neg balancing (weight=8.0 * 20 = 160.0)",
+        "attention_loss": "disabled (att_weight=0.0)"
+    },
+    "boundary_target_generation": "Exact official onehot_to_binary_edges with Euclidean distance transform (radius=2)",
+    "canny_prior_handling": "OpenCV Canny (thresholds 10, 100) on restored RGB input",
+    "normalization": {
+        "mean": [
+            0.485,
+            0.456,
+            0.406
+        ],
+        "std": [
+            0.229,
+            0.224,
+            0.225
+        ]
+    },
+    "scheduler": "CosineAnnealingLR",
+    "scheduler_eta_min": 1e-06,
+    "epochs": 50,
+    "min_delta": 0.0001,
+    "num_workers": 4,
+    "train_drop_last": true,
+    "val_drop_last": false,
+    "boundary_tolerance_k": 2,
+    "micro_batch_size": 2,
+    "gradient_accumulation_steps": 4,
+    "effective_batch_size": 8,
+    "val_batch_size": 2,
+    "early_stopping_metric": "mIoU",
+    "patience": 10,
+    "seed": 42,
+    "timestamp": "2026-08-21T01:51:28.973726",
+    "git_commit": "438db0474cc6f03fa3c610d428560023b329a849",
+    "environment": {
+        "python": "3.13.11",
+        "torch": "2.10.0+cu128",
+        "torchvision": "0.25.0+cu128",
+        "cuda": "12.8",
+        "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU"
+    }
+}

@@ -74,6 +74,48 @@ BENCHMARK_MODELS = {
         'encoder': 'Custom',
         'library': 'custom',
     },
+    'auraseg_r18': {
+        'name': 'AURASeg-R18',
+        'paper': 'Ours (WACV 2027)',
+        'paradigm': 'ASPP-Lite + APUD + RBRM',
+        'encoder': 'ResNet-18',
+        'library': 'custom',
+    },
+    'auraseg_r18_apud128': {
+        'name': 'AURASeg-R18 (APUD-128)',
+        'paper': 'Ours (WACV 2027)',
+        'paradigm': 'ASPP-Lite + APUD-128 + Full RBRM',
+        'encoder': 'ResNet-18',
+        'library': 'custom',
+    },
+    'auraseg_r18_apud64': {
+        'name': 'AURASeg-R18 (APUD-64)',
+        'paper': 'Ours (WACV 2027)',
+        'paradigm': 'ASPP-Lite + APUD-64 + Full RBRM',
+        'encoder': 'ResNet-18',
+        'library': 'custom',
+    },
+    'auraseg_r18_fast': {
+        'name': 'AURASeg-R18-Fast',
+        'paper': 'Ours (WACV 2027 Real-Time Variant)',
+        'paradigm': 'ASPP-Lite + APUD-128 + FastRBRM',
+        'encoder': 'ResNet-18',
+        'library': 'custom',
+    },
+    'auraseg_r50': {
+        'name': 'AURASeg-R50',
+        'paper': 'Ours (WACV 2027)',
+        'paradigm': 'ASPP-Lite + APUD + RBRM',
+        'encoder': 'ResNet-50',
+        'library': 'custom',
+    },
+    'auraseg_r50_fast': {
+        'name': 'AURASeg-R50-Fast',
+        'paper': 'Ours (WACV 2027 Real-Time Variant)',
+        'paradigm': 'ASPP-Lite + APUD-128 + FastRBRM',
+        'encoder': 'ResNet-50',
+        'library': 'custom',
+    },
 }
 
 
@@ -328,9 +370,187 @@ def _create_pidnet(num_classes: int, pretrained: bool):
     return model, info
 
 
+def _create_auraseg_r18(num_classes: int, pretrained: bool):
+    """Create AURASeg with ResNet-18 backbone (Base APUD-128 + Full RBRM)."""
+    import sys
+    import os
+    benchmark_dir = os.path.dirname(os.path.abspath(__file__))
+    if benchmark_dir not in sys.path:
+        sys.path.insert(0, benchmark_dir)
+    from auraseg_exportable import AURASeg_V4_ResNet
+    
+    model = AURASeg_V4_ResNet(
+        backbone='resnet18',
+        num_classes=num_classes,
+        decoder_channels=128,
+        fast_rbrm=False,
+        encoder_weights='imagenet' if pretrained else None
+    )
+    
+    info = {
+        'name': 'AURASeg-R18',
+        'uses_builtin_loss': False,
+        'output_key': None,
+        'requires_resize': False
+    }
+    return model, info
+
+
+def _create_auraseg_r18_apud128(num_classes: int, pretrained: bool):
+    """Create AURASeg with ResNet-18 and APUD-128 with full RBRM."""
+    from auraseg_exportable import AURASeg_V4_ResNet
+    model = AURASeg_V4_ResNet(
+        backbone='resnet18',
+        num_classes=num_classes,
+        decoder_channels=128,
+        fast_rbrm=False,
+        encoder_weights='imagenet' if pretrained else None
+    )
+    info = {
+        'name': 'AURASeg-R18-APUD128',
+        'uses_builtin_loss': False,
+        'output_key': None,
+        'requires_resize': False
+    }
+    return model, info
+
+
+def _create_auraseg_r18_apud64(num_classes: int, pretrained: bool):
+    """Create AURASeg with ResNet-18 and APUD-64 with full RBRM."""
+    from auraseg_exportable import AURASeg_V4_ResNet
+    model = AURASeg_V4_ResNet(
+        backbone='resnet18',
+        num_classes=num_classes,
+        decoder_channels=64,
+        fast_rbrm=False,
+        encoder_weights='imagenet' if pretrained else None
+    )
+    info = {
+        'name': 'AURASeg-R18-APUD64',
+        'uses_builtin_loss': False,
+        'output_key': None,
+        'requires_resize': False
+    }
+    return model, info
+
+
+def _create_auraseg_r18_fast(num_classes: int, pretrained: bool):
+    """Create AURASeg-Fast with ResNet-18 backbone (Real-Time Deployment Variant)."""
+    import sys
+    import os
+    benchmark_dir = os.path.dirname(os.path.abspath(__file__))
+    if benchmark_dir not in sys.path:
+        sys.path.insert(0, benchmark_dir)
+    from auraseg_exportable import auraseg_resnet18_fast
+    
+    model = auraseg_resnet18_fast(
+        num_classes=num_classes,
+        pretrained=pretrained
+    )
+    
+    info = {
+        'name': 'AURASeg-R18-Fast',
+        'uses_builtin_loss': False,
+        'output_key': None,
+        'requires_resize': False
+    }
+    return model, info
+
+
+def _create_auraseg_r50(num_classes: int, pretrained: bool):
+    """Create AURASeg with ResNet-50 backbone (Base APUD-128 + Full RBRM)."""
+    import sys
+    import os
+    benchmark_dir = os.path.dirname(os.path.abspath(__file__))
+    if benchmark_dir not in sys.path:
+        sys.path.insert(0, benchmark_dir)
+    from auraseg_exportable import AURASeg_V4_ResNet
+    
+    model = AURASeg_V4_ResNet(
+        backbone='resnet50',
+        num_classes=num_classes,
+        decoder_channels=128,
+        fast_rbrm=False,
+        encoder_weights='imagenet' if pretrained else None
+    )
+    
+    info = {
+        'name': 'AURASeg-R50',
+        'uses_builtin_loss': False,
+        'output_key': None,
+        'requires_resize': False
+    }
+    return model, info
+
+
+def _create_auraseg_r50_fast(num_classes: int, pretrained: bool):
+    """Create AURASeg-Fast with ResNet-50 backbone (Real-Time Deployment Variant)."""
+    import sys
+    import os
+    benchmark_dir = os.path.dirname(os.path.abspath(__file__))
+    if benchmark_dir not in sys.path:
+        sys.path.insert(0, benchmark_dir)
+    from auraseg_exportable import auraseg_resnet50_fast
+    
+    model = auraseg_resnet50_fast(
+        num_classes=num_classes,
+        pretrained=pretrained
+    )
+    
+    info = {
+        'name': 'AURASeg-R50-Fast',
+        'uses_builtin_loss': False,
+        'output_key': None,
+        'requires_resize': False
+    }
+    return model, info
+
+
 # =============================================================================
 # Factory Function
 # =============================================================================
+
+# Map common model aliases to canonical keys
+MODEL_ALIASES = {
+    'fcn-r50': 'fcn',
+    'fcn_r50': 'fcn',
+    'fcn50': 'fcn',
+    'pspnet-r50': 'pspnet',
+    'pspnet_r50': 'pspnet',
+    'pspnet50': 'pspnet',
+    'upernet-r50': 'upernet',
+    'upernet_r50': 'upernet',
+    'upernet50': 'upernet',
+    'segformer-b2': 'segformer',
+    'segformer_b2': 'segformer',
+    'segformerb2': 'segformer',
+    'pidnet-l': 'pidnet',
+    'pidnet_l': 'pidnet',
+    'pidnetl': 'pidnet',
+    'auraseg': 'auraseg_r18',
+    'auraseg-r18': 'auraseg_r18',
+    'auraseg_r18': 'auraseg_r18',
+    'auraseg-r18-apud128': 'auraseg_r18_apud128',
+    'auraseg_r18_apud128': 'auraseg_r18_apud128',
+    'auraseg-r18-128': 'auraseg_r18_apud128',
+    'auraseg-apud128': 'auraseg_r18_apud128',
+    'auraseg-r18-apud64': 'auraseg_r18_apud64',
+    'auraseg_r18_apud64': 'auraseg_r18_apud64',
+    'auraseg-r18-64': 'auraseg_r18_apud64',
+    'auraseg-apud64': 'auraseg_r18_apud64',
+    'auraseg-r18-fast': 'auraseg_r18_fast',
+    'auraseg_r18_fast': 'auraseg_r18_fast',
+    'auraseg-r18-opt': 'auraseg_r18_fast',
+    'auraseg-fast': 'auraseg_r18_fast',
+    'auraseg_fast': 'auraseg_r18_fast',
+    'auraseg-opt': 'auraseg_r18_fast',
+    'auraseg-r50': 'auraseg_r50',
+    'auraseg_r50': 'auraseg_r50',
+    'auraseg-r50-fast': 'auraseg_r50_fast',
+    'auraseg_r50_fast': 'auraseg_r50_fast',
+    'auraseg-r50-opt': 'auraseg_r50_fast',
+}
+
 
 def get_benchmark_model(model_name: str, num_classes: int = 2, 
                         pretrained: bool = True) -> Tuple[nn.Module, Dict[str, Any]]:
@@ -338,35 +558,49 @@ def get_benchmark_model(model_name: str, num_classes: int = 2,
     Create a benchmark model by name.
     
     Args:
-        model_name: One of 'deeplabv3plus', 'segformer', 'upernet', 'dpt', 'mask2former'
+        model_name: One of 'deeplabv3plus', 'segformer', 'upernet', 'dpt', 'mask2former',
+                    'fcn', 'pspnet', 'pidnet', 'auraseg_r18', 'auraseg_r50'
         num_classes: Number of output classes
         pretrained: Use pretrained backbone weights
         
     Returns:
         Tuple of (model, model_info_dict)
     """
-    model_name = model_name.lower()
+    model_name = model_name.lower().strip()
+    canonical_name = MODEL_ALIASES.get(model_name, model_name)
     
-    if model_name == 'deeplabv3plus':
+    if canonical_name == 'deeplabv3plus':
         model, info = _create_deeplabv3plus(num_classes, pretrained)
-    elif model_name == 'segformer':
+    elif canonical_name == 'segformer':
         model, info = _create_segformer(num_classes, pretrained)
-    elif model_name == 'upernet':
+    elif canonical_name == 'upernet':
         model, info = _create_upernet(num_classes, pretrained)
-    elif model_name == 'dpt':
+    elif canonical_name == 'dpt':
         model, info = _create_dpt(num_classes, pretrained)
-    elif model_name == 'mask2former':
+    elif canonical_name == 'mask2former':
         model, info = _create_mask2former(num_classes, pretrained)
-    elif model_name == 'fcn':
+    elif canonical_name == 'fcn':
         model, info = _create_fcn(num_classes, pretrained)
-    elif model_name == 'pspnet':
+    elif canonical_name == 'pspnet':
         model, info = _create_pspnet(num_classes, pretrained)
-    elif model_name == 'pidnet':
+    elif canonical_name == 'pidnet':
         model, info = _create_pidnet(num_classes, pretrained)
+    elif canonical_name == 'auraseg_r18':
+        model, info = _create_auraseg_r18(num_classes, pretrained)
+    elif canonical_name == 'auraseg_r18_apud128':
+        model, info = _create_auraseg_r18_apud128(num_classes, pretrained)
+    elif canonical_name == 'auraseg_r18_apud64':
+        model, info = _create_auraseg_r18_apud64(num_classes, pretrained)
+    elif canonical_name == 'auraseg_r18_fast':
+        model, info = _create_auraseg_r18_fast(num_classes, pretrained)
+    elif canonical_name == 'auraseg_r50':
+        model, info = _create_auraseg_r50(num_classes, pretrained)
+    elif canonical_name == 'auraseg_r50_fast':
+        model, info = _create_auraseg_r50_fast(num_classes, pretrained)
     else:
         raise ValueError(
             f"Unknown model: {model_name}. "
-            f"Available models: deeplabv3plus, segformer, upernet, dpt, mask2former, fcn, pspnet, pidnet"
+            f"Available models: deeplabv3plus, segformer, upernet, dpt, mask2former, fcn, pspnet, pidnet, auraseg_r18, auraseg_r18_apud128, auraseg_r18_apud64, auraseg_r18_fast, auraseg_r50, auraseg_r50_fast"
         )
     
     # Add parameter counts
@@ -375,9 +609,9 @@ def get_benchmark_model(model_name: str, num_classes: int = 2,
     info['total_params'] = total_params
     info['trainable_params'] = trainable_params
     info['params_millions'] = total_params / 1e6
-    info['encoder'] = BENCHMARK_MODELS[model_name]['encoder']
-    info['paradigm'] = BENCHMARK_MODELS[model_name]['paradigm']
-    info['paper'] = BENCHMARK_MODELS[model_name]['paper']
+    info['encoder'] = BENCHMARK_MODELS.get(canonical_name, {}).get('encoder', 'N/A')
+    info['paradigm'] = BENCHMARK_MODELS.get(canonical_name, {}).get('paradigm', 'N/A')
+    info['paper'] = BENCHMARK_MODELS.get(canonical_name, {}).get('paper', 'N/A')
     
     return model, info
 

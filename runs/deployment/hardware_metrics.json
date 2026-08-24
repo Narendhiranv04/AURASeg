@@ -1,0 +1,30 @@
+[
+  {
+    "key": "auraseg_r18",
+    "name": "AURASeg-R18",
+    "encoder": "ResNet-18",
+    "paradigm": "ASPP-Lite + APUD + RBRM",
+    "params_m": 20.860682,
+    "params_trainable_m": 20.851018,
+    "gflops": 72.704704384,
+    "pytorch_fp32": {
+      "latency_ms": 26.14704345703125,
+      "fps": 38.245241824122495,
+      "peak_memory_mb": 372.81884765625
+    },
+    "pytorch_fp16": {
+      "latency_ms": 16.781517333984375,
+      "fps": 59.58936728414257,
+      "peak_memory_mb": 321.23828125
+    },
+    "onnx": {
+      "latency_ms": 209.22122164498433,
+      "fps": 4.779629868029561,
+      "provider": "CPUExecutionProvider"
+    },
+    "tensorrt_fp16": {
+      "latency_ms": 18.123367919921876,
+      "fps": 55.177382284490456
+    }
+  }
+]

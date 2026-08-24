@@ -65,6 +65,21 @@ class Config:
     MASK_DIR = DATA_ROOT / "labels"
     
     # Output directory
+
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+class Config:
+    """Training configuration"""
+    
+    # Dataset paths
+    DATA_ROOT = Path(__file__).parent.parent / "CommonDataset"
+    IMAGE_DIR = DATA_ROOT / "images"
+    MASK_DIR = DATA_ROOT / "labels"
+    
+    # Output directory
     OUTPUT_DIR = Path(__file__).parent.parent / "runs" / "auraseg_v4_resnet50"
     
     # Model
@@ -74,6 +89,7 @@ class Config:
     # Training
     EPOCHS = 50
     BATCH_SIZE = 8
+    GRAD_ACCUM_STEPS = 1
     LR_ENCODER = 1e-4  # Lower LR for pretrained encoder
     LR_DECODER = 1e-3  # Higher LR for decoder modules
     WEIGHT_DECAY = 0.01
@@ -541,7 +557,6 @@ class AURASegTrainer:
             loaded_epoch = 0
 
         print(f"[INFO] Resumed from: {checkpoint_path}")
-        print(f"[INFO] Checkpoint epoch: {loaded_epoch} -> start_epoch={self.start_epoch}")
         print(f"[INFO] Best mIoU so far: {self.best_miou:.4f}")
     
     def train_epoch(self, train_loader: DataLoader, epoch: int) -> dict:
@@ -553,21 +568,25 @@ class AURASegTrainer:
         total_boundary_loss = 0.0
         total_aux_loss = 0.0
         
+        accum_steps = getattr(self.config, 'GRAD_ACCUM_STEPS', 1)
+        self.optimizer.zero_grad()
         pbar = tqdm(train_loader, desc=f"Train Epoch {epoch}")
         
-        for images, masks in pbar:
+        for i, (images, masks) in enumerate(pbar):
             images = images.to(self.device)
             masks = masks.to(self.device)
-            
-            self.optimizer.zero_grad()
             
             with autocast(enabled=self.use_amp):
                 outputs = self.model(images, return_aux=True, return_boundary=True)
                 losses = self.criterion(outputs, masks)
+                loss = losses['total'] / accum_steps
             
-            self.scaler.scale(losses['total']).backward()
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
+            self.scaler.scale(loss).backward()
+            
+            if (i + 1) % accum_steps == 0 or (i + 1) == len(train_loader):
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                self.optimizer.zero_grad()
             
             total_loss += losses['total'].item()
             total_seg_loss += losses['seg'].item()
@@ -711,6 +730,8 @@ def main():
     parser = argparse.ArgumentParser(description='Train AURASeg V4 with ResNet-50')
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--batch-size', type=int, default=8)
+    parser.add_argument('--grad-accum-steps', type=int, default=1,
+                        help='Gradient accumulation steps')
     parser.add_argument('--lr-encoder', type=float, default=1e-4)
     parser.add_argument('--lr-decoder', type=float, default=1e-3)
     parser.add_argument('--device', type=str, default='cuda')
@@ -735,6 +756,7 @@ def main():
     config = Config()
     config.EPOCHS = args.epochs
     config.BATCH_SIZE = args.batch_size
+    config.GRAD_ACCUM_STEPS = args.grad_accum_steps
     config.LR_ENCODER = args.lr_encoder
     config.LR_DECODER = args.lr_decoder
     config.NUM_WORKERS = args.num_workers

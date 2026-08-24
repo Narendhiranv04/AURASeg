@@ -1,0 +1,174 @@
+diff --git a/model/baseg.py b/model/baseg.py
+index 668c39f..d6bfb5b 100644
+--- a/model/baseg.py
++++ b/model/baseg.py
+@@ -6,7 +6,10 @@ import torch
+ import numpy as np
+ import torch.nn.functional as F
+ 
+-from apex import amp
++try:
++    from apex import amp
++except ImportError:
++    amp = None
+ from torch import nn
+ from model.resnet import get_resnet50_baseline, get_resnet101_baseline
+ 
+@@ -116,11 +119,11 @@ class BRM(nn.Module):
+         edge3_feat = self.edge_conv3(f3)
+         edge4_feat = self.edge_conv4(f4)
+ 
+-        canny_feat = self.cann_conv1(canny_feat)
++        canny_feat = self.canny_conv1(canny_feat)
+         edge1_feat = self.edge_agb1([edge1_feat, canny_feat])
+-        canny_feat = self.cann_conv2(canny_feat)
++        canny_feat = self.canny_conv2(canny_feat)
+         edge2_feat = self.edge_agb2([edge2_feat, canny_feat])
+-        canny_feat = self.cann_conv3(canny_feat)
++        canny_feat = self.canny_conv3(canny_feat)
+         edge3_feat = self.edge_agb3([edge3_feat, canny_feat])
+ 
+         slice_ed4 = edge4_feat[:, 0:1, :, :]
+@@ -212,16 +215,16 @@ class BASeg(nn.Module):
+         del resnet
+ 
+         # 2048 -> 512
+-        self.ASPP = ASPP(in_channels=embed_dim, out_channels=embed_dim)
++        self.ASPP = ASPP(in_channels=in_channels[-1], out_channels=embed_dim)
+         self.BRM = BRM(in_channels=in_channels, mid_channels=128, out_channels=num_classes)
+-        self.CAM = CAM(in_channels=in_channels[-1], edge_channels=num_classes, middle_channels=embed_dim)
++        self.CAM = CAM(in_channels=embed_dim, edge_channels=num_classes, middle_channels=embed_dim)
+ 
+         self.edge_seg = nn.Sequential(nn.Conv2d(num_classes, 1, kernel_size=3, padding=1, bias=False),
+                                        nn.BatchNorm2d(1),
+                                        nn.ReLU(inplace=True),
+                                        nn.Conv2d(1, 1, kernel_size=1))
+         self.conv_seg = nn.Sequential(
+-            nn.Conv2d(in_channels[-1], 256, kernel_size=3, padding=1, bias=False),
++            nn.Conv2d(embed_dim, 256, kernel_size=3, padding=1, bias=False),
+             nn.BatchNorm2d(256),
+             nn.ReLU(inplace=True),
+             nn.Conv2d(256, num_classes, kernel_size=1))
+@@ -234,8 +237,9 @@ class BASeg(nn.Module):
+                 nn.Dropout2d(p=0.),
+                 nn.Conv2d(256, num_classes, kernel_size=1))
+ 
+-        amp.register_float_function(torch, 'sigmoid')
+-        amp.register_float_function(torch, 'softmax')
++        if amp is not None:
++            amp.register_float_function(torch, 'sigmoid')
++            amp.register_float_function(torch, 'softmax')
+ 
+     def down_conv(self, in_channels, out_channels):
+         return nn.Sequential(
+@@ -244,14 +248,14 @@ class BASeg(nn.Module):
+             nn.ReLU(inplace=True))
+ 
+     def get_canny_feature(self, inp, size):
+-        
+-        img = inp.cpu().numpy().transpose((0, 2, 3, 1)).astype(np.uint8)
+-        canny = np.zeros((size[0], 1, size[2], size[3]))
++        mean = torch.tensor([0.485, 0.456, 0.406], device=inp.device).view(1, 3, 1, 1)
++        std = torch.tensor([0.229, 0.224, 0.225], device=inp.device).view(1, 3, 1, 1)
++        img_rgb = torch.clamp((inp * std + mean) * 255.0, 0, 255).byte()
++        img = img_rgb.cpu().numpy().transpose((0, 2, 3, 1))
++        canny = np.zeros((size[0], 1, size[2], size[3]), dtype=np.float32)
+         for i in range(size[0]):
+-            canny[i] = cv2.Canny(img[i], 10, 100)
+-        
+-        canny = torch.from_numpy(canny).cuda().float()
+-        
++            canny[i, 0] = cv2.Canny(img[i], 10, 100) / 255.0
++        canny = torch.from_numpy(canny).to(inp.device).float()
+         return canny
+ 
+     def forward(self, inp, gts=None):
+@@ -267,7 +271,6 @@ class BASeg(nn.Module):
+ 
+         # ASPP
+         x = self.ASPP(f4)
+-        # x = torch.cat([x, f4], dim=1)
+ 
+         # Edge
+         canny = self.get_canny_feature(inp, f0_size)
+@@ -282,10 +285,15 @@ class BASeg(nn.Module):
+         edge = self.edge_seg(edge_)
+         edge = self.interpolate(edge, f0_size[2:], mode='bilinear', align_corners=True)
+ 
+-        # Loss
++        # Loss / Output
+         if self.training:
+-            aux = self.aux(f3)
++            if hasattr(self, 'aux'):
++                aux = self.aux(f3)
++            else:
++                aux = x
+             aux = self.interpolate(aux, size=f0_size[2:], mode='bilinear', align_corners=True)
+-            return x, edge, self.criterion((x, aux, edge), gts)
++            if self.criterion is not None and gts is not None:
++                return x, edge, self.criterion((x, aux, edge), gts)
++            return x, aux, edge
+         else:
+             return x, edge
+diff --git a/model/resnet.py b/model/resnet.py
+index f7ed4cb..2855991 100644
+--- a/model/resnet.py
++++ b/model/resnet.py
+@@ -132,33 +132,35 @@ class ResNet(nn.Module):
+         return x
+ 
+ 
+-def get_resnet101_baseline(pretrained=False, num_classes=19,multi_grid=(1,1,1),BatchNorm=nn.BatchNorm2d):
+-    model = ResNet(Bottleneck,[3, 4, 23, 3], num_classes, multi_grid=multi_grid, BatchNorm2d=BatchNorm)
++def get_resnet101_baseline(pretrained=False, num_classes=19, multi_grid=(1,1,1), BatchNorm=nn.BatchNorm2d):
++    model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes, multi_grid=multi_grid, BatchNorm2d=BatchNorm)
+     if pretrained:
+-        #pretrain_dict = model_zoo.load_url('https://download.pytorch.org/models/resnet101-5d3b4d8f.pth')
+-        pretrain_dict = torch.load("../../Model/resnet101_v2.pth")
+-        model_dict = {}
+-        state_dict = model.state_dict()
+-        for k, v in pretrain_dict.items():
+-            if k in state_dict:
+-                model_dict[k] = v
+-        state_dict.update(model_dict)
+-        model.load_state_dict(state_dict)
++        try:
++            from torchvision.models import resnet101, ResNet101_Weights
++            tv_model = resnet101(weights=ResNet101_Weights.IMAGENET1K_V1)
++            tv_state = tv_model.state_dict()
++            model_dict = model.state_dict()
++            matched_dict = {k: v for k, v in tv_state.items() if k in model_dict and v.shape == model_dict[k].shape}
++            model_dict.update(matched_dict)
++            model.load_state_dict(model_dict)
++        except Exception as e:
++            print(f"Warning: Could not load pretrained weights: {e}")
+     return model
+ 
+ 
+-def get_resnet50_baseline(pretrained=False,num_classes=19,multi_grid=(1,1,1), BatchNorm=nn.BatchNorm2d):
+-    model = ResNet(Bottleneck, [3, 4, 6, 3], num_classes,multi_grid=multi_grid, BatchNorm2d=BatchNorm)
++def get_resnet50_baseline(pretrained=False, num_classes=19, multi_grid=(1,1,1), BatchNorm=nn.BatchNorm2d):
++    model = ResNet(Bottleneck, [3, 4, 6, 3], num_classes, multi_grid=multi_grid, BatchNorm2d=BatchNorm)
+     if pretrained:
+-        #pretrain_dict = model_zoo.load_url('https://download.pytorch.org/models/resnet50-19c8e357.pth')
+-        pretrain_dict = torch.load("../../Model/resnet50_v2.pth")
+-        model_dict = {}
+-        state_dict = model.state_dict()
+-        for k, v in pretrain_dict.items():
+-            if k in state_dict:
+-                model_dict[k] = v
+-        state_dict.update(model_dict)
+-        model.load_state_dict(state_dict)
++        try:
++            from torchvision.models import resnet50, ResNet50_Weights
++            tv_model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
++            tv_state = tv_model.state_dict()
++            model_dict = model.state_dict()
++            matched_dict = {k: v for k, v in tv_state.items() if k in model_dict and v.shape == model_dict[k].shape}
++            model_dict.update(matched_dict)
++            model.load_state_dict(model_dict)
++        except Exception as e:
++            print(f"Warning: Could not load pretrained weights: {e}")
+     return model
+ 
+ 

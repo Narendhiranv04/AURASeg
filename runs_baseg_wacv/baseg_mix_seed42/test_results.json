@@ -1,0 +1,21 @@
+{
+    "model": "BASeg-R101",
+    "dataset": "/media/naren/Windows/Users/naren/Documents/AURASeg/CommonDataset",
+    "dataset_type": "mix",
+    "checkpoint_epoch": 44,
+    "val_best_miou": 0.9886742151927158,
+    "metrics": {
+        "iou_background": 0.9898702140811697,
+        "iou_drivable": 0.9874782163042619,
+        "miou": 0.9886742151927158,
+        "dice": 0.9936996624199248,
+        "precision": 0.9941294834522996,
+        "recall": 0.9932702129010572,
+        "f1": 0.9936991624202576,
+        "accuracy": 0.9943687224149811,
+        "boundary_iou": 0.7660188752166447,
+        "boundary_precision": 0.9053013231056577,
+        "boundary_recall": 0.8259782662399219,
+        "boundary_f1": 0.8608709101599396
+    }
+}

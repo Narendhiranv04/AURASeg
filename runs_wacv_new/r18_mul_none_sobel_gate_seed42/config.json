@@ -1,0 +1,78 @@
+{
+    "backbone": "resnet18",
+    "fusion_type": "mul",
+    "attention_mode": "none",
+    "use_sobel": true,
+    "use_gate": true,
+    "seed": 42,
+    "dataset": "/media/naren/Windows/Users/naren/Documents/AURASeg/CommonDataset",
+    "input_resolution": [
+        384,
+        640
+    ],
+    "optimizer": "AdamW",
+    "learning_rates": {
+        "encoder": 0.0001,
+        "decoder": 0.001
+    },
+    "weight_decay": 0.01,
+    "AMP": true,
+    "loss_configuration": {
+        "focal_alpha": 0.25,
+        "focal_gamma": 2.0,
+        "focal_weight": 0.5,
+        "dice_weight": 0.5,
+        "boundary_weight": 0.2,
+        "boundary_criterion": "BCEWithLogitsLoss",
+        "boundary_target_method": "morphological (dilate - erode)",
+        "boundary_target_kernel": "3x3",
+        "aux_weight_per_stage": 0.1,
+        "auxiliary_formulation": "L_focal + L_dice",
+        "number_of_aux_stages": 4
+    },
+    "augmentation": {
+        "shift_limit": 0.1,
+        "scale_limit": 0.1,
+        "rotate_limit": 15,
+        "brightness_limit": 0.2,
+        "contrast_limit": 0.2,
+        "gauss_var_limit": [
+            10.0,
+            50.0
+        ],
+        "flip_p": 0.5,
+        "color_p": 0.3,
+        "noise_p": 0.2,
+        "geom_p": 0.5
+    },
+    "normalization": {
+        "mean": [
+            0.485,
+            0.456,
+            0.406
+        ],
+        "std": [
+            0.229,
+            0.224,
+            0.225
+        ]
+    },
+    "scheduler": "CosineAnnealingLR",
+    "scheduler_eta_min": 1e-06,
+    "epochs": 50,
+    "micro_batch_size": 4,
+    "gradient_accumulation_steps": 2,
+    "effective_batch_size": 8,
+    "val_batch_size": 4,
+    "num_workers": 4,
+    "pin_memory": true,
+    "dataloader_drop_last": {
+        "train": true,
+        "val": false
+    },
+    "early_stopping_metric": "mIoU",
+    "patience": 10,
+    "min_delta": 0.0001,
+    "timestamp": "2026-08-10T19:24:51.044486",
+    "git_commit": "43a1ca7db165b3acd2f079dc5551ec9e6cc7ac99"
+}

@@ -37,27 +37,28 @@ GAZEBO/
 GMRPD/
 
 # ==============================================================================
-# CHECKPOINTS - Exclude (too large for GitHub, >100MB each)
-# Will be uploaded to Google Drive separately
+# CHECKPOINTS & BINARY EXPORTS - Exclude (>50MB each)
 # ==============================================================================
 *.pth
-
-# ==============================================================================
-# KEEP - Results, Plots, CSVs, Code
-# ==============================================================================
-# We WANT to include:
-# - runs/**/*.csv (evaluation results)
-# - runs/**/*.png (training plots)
-# - runs/**/*.txt (comparison results)
-# - runs_carl/ (CARL dataset results - CSVs, plots)
-# - benchmark_models/ (all code)
-# - kobuki-yolop/ (model implementations)
+*.pt
+*.onnx
+*.onnx.data
+*.data
+*.engine
+*.zip
+*.log
+runs/deployment/onnx/
+runs/deployment/tensorrt/
+runs/deployment/*.onnx*
+runs/deployment/*.engine*
 
 # Temporary/debug files to exclude
 debug_cuda.py
 test_fcn.py
 param_report.txt
 paper.pdf
+patch_*.py
+rewrite_*.py
 
 # OS files
 .DS_Store

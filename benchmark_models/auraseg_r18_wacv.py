@@ -317,38 +317,59 @@ class BoundaryDecoder(nn.Module):
 class RBRMModule(nn.Module):
     def __init__(self, in_channels: int = 256, edge_channels: int = 64, 
                  use_sobel: bool = True, use_gate: bool = True,
-                 simple_boundary_head: bool = False):
+                 simple_boundary_head: bool = False,
+                 fast_rbrm: bool = False):
         super().__init__()
         self.use_gate = use_gate
         self.simple_boundary_head = simple_boundary_head
+        self.fast_rbrm = fast_rbrm
         
-        self.boundary_head = BoundaryDetectionHead(in_channels, edge_channels, use_sobel=use_sobel)
-        
-        if self.simple_boundary_head:
-            self.simple_convs = nn.Sequential(
-                ConvBNAct(edge_channels, edge_channels, kernel_size=3, activation='relu'),
-                ConvBNAct(edge_channels, edge_channels, kernel_size=3, activation='relu')
-            )
-            self.boundary_proj = nn.Conv2d(edge_channels, in_channels, 1)
-        else:
-            self.boundary_encoder = BoundaryEncoder(edge_channels)
-            self.boundary_decoder = BoundaryDecoder(edge_channels)
-            
-            self.boundary_proj = nn.Sequential(
-                ConvBNAct(edge_channels, in_channels, kernel_size=1),
-                nn.Conv2d(in_channels, in_channels, 1, bias=False)
-            )
-        
-        if self.use_gate:
-            self.fusion_gate = nn.Sequential(
-                nn.Conv2d(in_channels * 2, in_channels, 1, bias=False),
+        if self.fast_rbrm:
+            self.fast_edge = nn.Sequential(
+                nn.Conv2d(in_channels, edge_channels, 3, padding=1, bias=False),
+                nn.BatchNorm2d(edge_channels),
+                nn.SiLU(inplace=True),
+                nn.Conv2d(edge_channels, in_channels, 1, bias=False),
                 nn.BatchNorm2d(in_channels),
                 nn.Sigmoid()
             )
+            self.boundary_pred = nn.Conv2d(edge_channels, 1, 1)
+        else:
+            self.boundary_head = BoundaryDetectionHead(in_channels, edge_channels, use_sobel=use_sobel)
             
-        self.boundary_pred = nn.Conv2d(edge_channels, 1, 1)
+            if self.simple_boundary_head:
+                self.simple_convs = nn.Sequential(
+                    ConvBNAct(edge_channels, edge_channels, kernel_size=3, activation='relu'),
+                    ConvBNAct(edge_channels, edge_channels, kernel_size=3, activation='relu')
+                )
+                self.boundary_proj = nn.Conv2d(edge_channels, in_channels, 1)
+            else:
+                self.boundary_encoder = BoundaryEncoder(edge_channels)
+                self.boundary_decoder = BoundaryDecoder(edge_channels)
+                
+                self.boundary_proj = nn.Sequential(
+                    ConvBNAct(edge_channels, in_channels, kernel_size=1),
+                    nn.Conv2d(in_channels, in_channels, 1, bias=False)
+                )
+            
+            if self.use_gate:
+                self.fusion_gate = nn.Sequential(
+                    nn.Conv2d(in_channels * 2, in_channels, 1, bias=False),
+                    nn.BatchNorm2d(in_channels),
+                    nn.Sigmoid()
+                )
+                
+            self.boundary_pred = nn.Conv2d(edge_channels, 1, 1)
     
     def forward(self, x: torch.Tensor, return_boundary: bool = False) -> dict:
+        if self.fast_rbrm:
+            gate = self.fast_edge(x)
+            refined = x + x * gate
+            result = {'features': refined}
+            if return_boundary:
+                result['boundary'] = torch.zeros(x.shape[0], 1, x.shape[2], x.shape[3], device=x.device)
+            return result
+            
         edge_features = self.boundary_head(x)
         
         if self.simple_boundary_head:
@@ -383,13 +404,14 @@ class AURASeg_R18_WACV(nn.Module):
     """
     def __init__(self, 
                  num_classes: int = 2, 
-                 decoder_channels: int = 256,
+                 decoder_channels: int = 128,
                  encoder_weights: str = 'imagenet',
                  fusion_type: str = 'mul',
                  attention_mode: str = 'full',
                  use_sobel: bool = True,
                  use_gate: bool = True,
-                 simple_boundary_head: bool = False):
+                 simple_boundary_head: bool = False,
+                 fast_rbrm: bool = False):
         super().__init__()
         
         self.num_classes = num_classes
@@ -423,10 +445,11 @@ class AURASeg_R18_WACV(nn.Module):
         
         self.rbrm = RBRMModule(
             in_channels=decoder_channels,
-            edge_channels=64,
+            edge_channels=32 if fast_rbrm else 64,
             use_sobel=use_sobel,
             use_gate=use_gate,
-            simple_boundary_head=simple_boundary_head
+            simple_boundary_head=simple_boundary_head,
+            fast_rbrm=fast_rbrm
         )
         
         self.seg_head = nn.Sequential(

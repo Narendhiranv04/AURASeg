@@ -1,0 +1,17 @@
+% ===========================================================================
+% Table 4: On-Device Hardware Deployment Metrics
+% ===========================================================================
+\begin{table*}[t]
+\centering
+\caption{On-Device Hardware Deployment Metrics evaluated on NVIDIA GeForce RTX 5060 Laptop GPU at $384 \times 640$ resolution.}
+\label{tab:hardware_deployment}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llccccccc}
+\toprule
+\textbf{Model} & \textbf{Backbone} & \textbf{Params (M)} & \textbf{GFLOPs} & \textbf{Peak VRAM (MB)} & \textbf{PyTorch FP32 (ms)} & \textbf{FP32 FPS} & \textbf{TRT FP16 (ms)} & \textbf{TRT FP16 FPS} \\
+\midrule
+\textbf{AURASeg-R18} & \textbf{ResNet-18} & \textbf{20.86} & \textbf{72.70} & \textbf{372.8} & \textbf{26.15} & \textbf{38.2} & \textbf{18.12} & \textbf{55.2} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}

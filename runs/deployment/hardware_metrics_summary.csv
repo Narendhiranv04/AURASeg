@@ -1,0 +1,2 @@
+Model,Encoder,Paradigm,Params (M),Trainable Params (M),GFLOPs,Peak VRAM (MB),FP32 Latency (ms),FP32 FPS,FP16 Latency (ms),FP16 FPS,ONNX Latency (ms),ONNX FPS,TRT FP16 Latency (ms),TRT FP16 FPS
+AURASeg-R18,ResNet-18,ASPP-Lite + APUD + RBRM,20.86,20.85,72.70,372.8,26.15,38.2,16.78,59.6,209.22,4.8,18.12,55.2

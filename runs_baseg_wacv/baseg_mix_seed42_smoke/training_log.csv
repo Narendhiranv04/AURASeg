@@ -1,0 +1,2 @@
+epoch,train_loss,val_miou,val_iou_drivable,val_f1,val_boundary_iou,val_boundary_f1,encoder_lr,decoder_lr,is_best
+1,8.750436,0.272224,0.000000,0.000000,0.000000,0.000000,9.99e-05,9.99e-04,True

@@ -1,0 +1,15 @@
+==========================================================================================
+HARDWARE METRICS DEPLOYMENT REPORT
+Date: 2026-08-25 00:13:51
+Device: NVIDIA GeForce RTX 5060 Laptop GPU
+TensorRT Version: 11.2.1.2
+==========================================================================================
+
+Model: AURASeg-R18 (Encoder: ResNet-18, Paradigm: ASPP-Lite + APUD + RBRM)
+  Params: 20.86M (Trainable: 20.85M)
+  GFLOPs: 72.70
+  PyTorch FP32: 26.15 ms | 38.2 FPS | Peak Mem: 372.81884765625 MB
+  PyTorch FP16: 16.78 ms | 59.6 FPS | Peak Mem: 321.23828125 MB
+  ONNX Runtime: 209.22 ms | 4.8 FPS
+  TensorRT FP16: 18.12 ms | 55.2 FPS
+

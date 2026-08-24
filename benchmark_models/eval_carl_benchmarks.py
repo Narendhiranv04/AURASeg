@@ -37,7 +37,7 @@ from datetime import datetime
 import torch
 import torch.nn.functional as F
 import numpy as np
-import pandas as pd
+import csv
 import cv2
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -489,33 +489,29 @@ def main():
         print("\nNo models were evaluated!")
         return
     
-    results_df = pd.DataFrame(results)
-    
     # Sort by mIoU
-    results_df = results_df.sort_values('mIoU', ascending=False)
+    results.sort(key=lambda x: x.get('mIoU', 0), reverse=True)
     
     # Save to CSV
     csv_path = config.OUTPUT_DIR / "carl_benchmark_results.csv"
-    results_df.to_csv(csv_path, index=False)
-    print(f"\nResults saved to: {csv_path}")
+    if results:
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=list(results[0].keys()))
+            writer.writeheader()
+            writer.writerows(results)
+        print(f"\nResults saved to: {csv_path}")
     
     # Print full table
     print("\n" + "=" * 120)
     print("CARL DATASET - BENCHMARK COMPARISON RESULTS (TEST SET)")
     print("=" * 120)
     
-    # Format for display
-    display_cols = ['Model', 'Params (M)', 'mIoU', 'IoU (Drivable)', 'Dice', 
-                    'F1', 'Boundary IoU', 'Boundary F1', 'FPS']
-    display_df = results_df[display_cols].copy()
-    
-    # Format numeric columns
-    for col in ['mIoU', 'IoU (Drivable)', 'Dice', 'F1', 'Boundary IoU', 'Boundary F1']:
-        display_df[col] = display_df[col].apply(lambda x: f"{x:.4f}")
-    display_df['FPS'] = display_df['FPS'].apply(lambda x: f"{x:.1f}")
-    display_df['Params (M)'] = display_df['Params (M)'].apply(lambda x: f"{x:.2f}")
-    
-    print(display_df.to_string(index=False))
+    header = f"{'Model':<20} | {'Params (M)':>10} | {'mIoU':>8} | {'IoU-Drv':>8} | {'Dice':>8} | {'F1':>8} | {'B-IoU':>8} | {'B-F1':>8} | {'FPS':>8}"
+    print(header)
+    print("-" * 120)
+    for r in results:
+        line = f"{r['Model']:<20} | {r['Params (M)']:>10.2f} | {r['mIoU']:>8.4f} | {r['IoU (Drivable)']:>8.4f} | {r['Dice']:>8.4f} | {r['F1']:>8.4f} | {r['Boundary IoU']:>8.4f} | {r['Boundary F1']:>8.4f} | {r['FPS']:>8.1f}"
+        print(line)
     print("=" * 120)
     
     # Save detailed results to text file
@@ -532,7 +528,7 @@ def main():
         f.write(header)
         f.write("-" * 120 + "\n")
         
-        for _, row in results_df.iterrows():
+        for row in results:
             line = f"{row['Model']:<20} | {row['mIoU']:>8.4f} | {row['IoU (Drivable)']:>8.4f} | {row['IoU (Background)']:>8.4f} | {row['Dice']:>8.4f} | {row['Precision']:>8.4f} | {row['Recall']:>8.4f} | {row['F1']:>8.4f} | {row['Accuracy']:>8.4f}\n"
             f.write(line)
         
@@ -542,7 +538,7 @@ def main():
         f.write(header)
         f.write("-" * 100 + "\n")
         
-        for _, row in results_df.iterrows():
+        for row in results:
             line = f"{row['Model']:<20} | {row['Boundary IoU']:>10.4f} | {row['Boundary Precision']:>10.4f} | {row['Boundary Recall']:>10.4f} | {row['Boundary F1']:>10.4f}\n"
             f.write(line)
         
@@ -552,7 +548,7 @@ def main():
         f.write(header)
         f.write("-" * 80 + "\n")
         
-        for _, row in results_df.iterrows():
+        for row in results:
             line = f"{row['Model']:<20} | {row['Params (M)']:>12.2f} | {row['Latency (ms)']:>14.2f} | {row['FPS']:>10.1f}\n"
             f.write(line)
         

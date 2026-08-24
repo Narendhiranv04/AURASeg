@@ -261,11 +261,11 @@ class BenchmarkTrainer:
         self.device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
         self.repo_root = Path(__file__).parent.parent
         
-        # Set random seed
-        set_seed(self.config.seed)
-        
         # Override config with args
         self.config = Config(args)
+        
+        # Set random seed
+        set_seed(self.config.seed)
         if args.epochs:
             self.config.EPOCHS = args.epochs
         if args.batch_size:
@@ -687,7 +687,7 @@ def parse_args():
     
     # Model selection
     parser.add_argument('--model', type=str, required=True,
-                        choices=['deeplabv3plus', 'segformer', 'upernet', 'fcn', 'pspnet', 'pidnet'],
+                        choices=['deeplabv3plus', 'segformer', 'upernet', 'fcn', 'pspnet', 'pidnet', 'mask2former'],
                         help='Benchmark model to train')
     
     # Training params
@@ -730,7 +730,7 @@ def main():
     args = parse_args()
     
     # Validate model choice
-    available_models = ['deeplabv3plus', 'segformer', 'upernet', 'fcn', 'pspnet', 'pidnet']
+    available_models = ['deeplabv3plus', 'segformer', 'upernet', 'fcn', 'pspnet', 'pidnet', 'mask2former']
     if args.model not in available_models:
         print(f"Error: Unknown model '{args.model}'")
         print(f"Available models: {available_models}")

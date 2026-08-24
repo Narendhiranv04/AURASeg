@@ -1,0 +1,5 @@
+Model,Backbone,Params (M),GFLOPs,Peak Memory (MB),Latency (ms),FPS,Runtime
+AURASeg,resnet18,23.30,134.68,593.9,73.52,13.6,PyTorch
+AURASeg,resnet18,23.30,134.68,,135.55,7.4,ONNX RT
+AURASeg,resnet50,42.46,148.87,778.7,76.57,13.1,PyTorch
+AURASeg,resnet50,42.46,148.87,,168.92,5.9,ONNX RT

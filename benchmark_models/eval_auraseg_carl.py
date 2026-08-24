@@ -17,7 +17,7 @@ from datetime import datetime
 import torch
 import torch.nn.functional as F
 import numpy as np
-import pandas as pd
+import csv
 import cv2
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
@@ -408,19 +408,31 @@ def main():
     
     # Save to CSV
     csv_path = config.OUTPUT_DIR / "carl_auraseg_results.csv"
-    pd.DataFrame([result]).to_csv(csv_path, index=False)
+    with open(csv_path, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=list(result.keys()))
+        writer.writeheader()
+        writer.writerow(result)
     print(f"\nResults saved to: {csv_path}")
     
     # Append to combined results
     combined_csv = config.OUTPUT_DIR / "carl_benchmark_results.csv"
+    rows = []
     if combined_csv.exists():
-        combined_df = pd.read_csv(combined_csv)
-        # Remove existing AURASeg entry if present
-        combined_df = combined_df[~combined_df['Model'].str.contains('AURASeg', case=False, na=False)]
-        combined_df = pd.concat([combined_df, pd.DataFrame([result])], ignore_index=True)
-        combined_df = combined_df.sort_values('mIoU', ascending=False)
-        combined_df.to_csv(combined_csv, index=False)
-        print(f"Updated combined results: {combined_csv}")
+        with open(combined_csv, 'r', newline='') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if 'AURASeg' not in row.get('Model', ''):
+                    rows.append(row)
+    rows.append(result)
+    try:
+        rows.sort(key=lambda x: float(x.get('mIoU', 0)), reverse=True)
+    except Exception:
+        pass
+    with open(combined_csv, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=list(result.keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"Updated combined results: {combined_csv}")
     
     print("\nEvaluation complete!")
 

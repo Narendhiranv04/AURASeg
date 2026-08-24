@@ -1,0 +1,29 @@
+AURASeg DEPLOYMENT BENCHMARK RESULTS
+================================================================================
+Date: 2026-03-05 23:58:05
+Device: NVIDIA GeForce RTX 5060 Laptop GPU
+Input Resolution: 384 × 640
+================================================================================
+
+Backbone: resnet18
+  Params: 23.30M
+  GFLOPs: 134.68
+  PyTorch:
+    Latency: 73.52 ms
+    FPS: 13.6
+    Peak Memory: 593.9 MB
+  ONNX Runtime:
+    Latency: 135.55 ms
+    FPS: 7.4
+
+Backbone: resnet50
+  Params: 42.46M
+  GFLOPs: 148.87
+  PyTorch:
+    Latency: 76.57 ms
+    FPS: 13.1
+    Peak Memory: 778.7 MB
+  ONNX Runtime:
+    Latency: 168.92 ms
+    FPS: 5.9
+
