@@ -25,20 +25,14 @@ ENV/
 # Jupyter
 .ipynb_checkpoints/
 
-# ==============================================================================
-# DATASETS - Exclude (too large)
-# ==============================================================================
+# Datasets
 carl-dataset/
 CommonDataset/
 CommonDataset.zip
 GAZEBO/
-
-# External repos (have their own git)
 GMRPD/
 
-# ==============================================================================
-# CHECKPOINTS & BINARY EXPORTS - Exclude (>50MB each)
-# ==============================================================================
+# Checkpoints and binary exports
 *.pth
 *.pt
 *.onnx
@@ -52,11 +46,17 @@ runs/deployment/tensorrt/
 runs/deployment/*.onnx*
 runs/deployment/*.engine*
 
-# Temporary/debug files to exclude
+# Generated manuscript/review PDFs
+2510*.pdf
+*WACV*.pdf
+main.pdf
+ieeeconf*.pdf
+paper.pdf
+
+# Temporary/debug files
 debug_cuda.py
 test_fcn.py
 param_report.txt
-paper.pdf
 patch_*.py
 rewrite_*.py
 
@@ -65,8 +65,8 @@ rewrite_*.py
 Thumbs.db
 desktop.ini
 
-# The reorganized folder (we're using actual structure)
+# Local reorganized folder
 github_repo/
 
-# Visualization outputs (can regenerate)
+# Regenerable visualization outputs
 visualization-val/
