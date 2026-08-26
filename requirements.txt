@@ -1,0 +1,10 @@
+torch>=2.0
+torchvision
+numpy
+opencv-python
+albumentations
+segmentation-models-pytorch
+timm
+tqdm
+tensorboard
+thop
